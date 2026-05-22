@@ -1,0 +1,15 @@
+<html>
+<body>
+<pre>
+<h1>礦ision Build Log</h1>
+<h2>Project:</h2>
+D:\C\C51\数码管模块测试程序\led_segment_test.uvproj
+Project File Date:  01/23/2018
+
+<h2>Output:</h2>
+Build target 'Target 1'
+compiling main.c...
+linking...
+Program Size: data=27.0 xdata=0 code=539
+creating hex file from "led_segment_test"...
+"led_segment_test" - 0 Error(s), 0 Warning(s).

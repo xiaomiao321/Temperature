@@ -1,0 +1,295 @@
+Interrupt Vectors
+    00000 940C 0050 JMP	__text_start|__start
+
+Program Code (text area)
+__text_start|__start:
+    00050 EFCF      LDI	R28,0xFF
+    00051 E1D0      LDI	R29,0x10
+    00052 BFCD      OUT	0x3D,R28
+    00053 BFDE      OUT	0x3E,R29
+    00054 51CE      SUBI	R28,0x1E
+    00055 40D0      SBCI	R29,0
+    00056 EA0A      LDI	R16,0xAA
+    00057 8308      ST	Y,R16
+    00058 2400      CLR	R0
+    00059 E1E3      LDI	R30,0x13
+    0005A E0F1      LDI	R31,1
+    0005B E011      LDI	R17,1
+    0005C 31E3      CPI	R30,0x13
+    0005D 07F1      CPC	R31,R17
+    0005E F011      BEQ	0x0061
+    0005F 9201      ST	Z+,R0
+    00060 CFFB      RJMP	0x005C
+    00061 8300      ST	Z,R16
+    00062 E8EC      LDI	R30,0x8C
+    00063 E0F0      LDI	R31,0
+    00064 E0A0      LDI	R26,0
+    00065 E0B1      LDI	R27,1
+    00066 E010      LDI	R17,0
+    00067 E000      LDI	R16,0
+    00068 BF0B      OUT	0x3B,R16
+    00069 39EF      CPI	R30,0x9F
+    0006A 07F1      CPC	R31,R17
+    0006B F021      BEQ	0x0070
+    0006C 95C8      LPM
+    0006D 9631      ADIW	R30,1
+    0006E 920D      ST	X+,R0
+    0006F CFF9      RJMP	0x0069
+    00070 940E 00BF CALL	_main
+_exit:
+    00072 CFFF      RJMP	_exit
+_Delay:
+  i                    --> R20
+  j                    --> R22
+  times                --> R16
+    00073 940E 0102 CALL	push_xgsetF000
+FILE: C:\Users\Dan7\Desktop\PIVHC\74HC595SHOW\595.c
+(0001) #include <iom128v.h>
+(0002) #include <macros.h>
+(0003) 
+(0004) #define uchar       unsigned char
+(0005) #define uint        unsigned int
+(0006) #define ulint       unsigned long int
+(0007) 
+(0008) #define SDK1             PORTA|=BIT(5)
+(0009) #define SDK0             PORTA&=~BIT(5)
+(0010) 
+(0011) #define CLK1             PORTA|=BIT(6)
+(0012) #define CLK0             PORTA&=~BIT(6)
+(0013) 
+(0014) #define LOAD1             PORTA|=BIT(7)
+(0015) #define LOAD0             PORTA&=~BIT(7)
+(0016) 
+(0017) 
+(0018) uchar tabnum=0;
+(0019) uchar Tab[]={0xc0,0xcf,0xa4,0xb0,0x99,0x92,0x82,0xf8,0x80,0x90,0x88,0x83,0xc6,0xa1,0x86,0x8e,0xff,0x7f};
+(0020) //0 1 2 3 4 5 6 7 8 9 A B C D F 灭 . //  共阳数码管
+(0021) 
+(0022) 
+(0023) 
+(0024) void Delay(uint times)//空延时语句500us
+(0025)  {uint i;
+(0026)   uint j; 
+(0027)  for(i=0;i<times;i++)
+    00075 2744      CLR	R20
+    00076 2755      CLR	R21
+    00077 C00B      RJMP	0x0083
+(0028)   for(j=0;j<500;j++); 
+    00078 2766      CLR	R22
+    00079 2777      CLR	R23
+    0007A C002      RJMP	0x007D
+    0007B 5F6F      SUBI	R22,0xFF
+    0007C 4F7F      SBCI	R23,0xFF
+    0007D 3F64      CPI	R22,0xF4
+    0007E E0E1      LDI	R30,1
+    0007F 077E      CPC	R23,R30
+    00080 F3D0      BCS	0x007B
+    00081 5F4F      SUBI	R20,0xFF
+    00082 4F5F      SBCI	R21,0xFF
+    00083 1740      CP	R20,R16
+    00084 0751      CPC	R21,R17
+    00085 F390      BCS	0x0078
+    00086 940C 0107 JMP	pop_xgsetF000
+_Delay1:
+  i                    --> R20
+  j                    --> R22
+  times                --> R16
+    00088 940E 0102 CALL	push_xgsetF000
+(0029)      }
+(0030) void Delay1(uint times)//空延时语句10us
+(0031)  {uint i;
+(0032)   uint j; 
+(0033)  for(i=0;i<times;i++)
+    0008A 2744      CLR	R20
+    0008B 2755      CLR	R21
+    0008C C00B      RJMP	0x0098
+(0034)   for(j=0;j<10;j++); 
+    0008D 2766      CLR	R22
+    0008E 2777      CLR	R23
+    0008F C002      RJMP	0x0092
+    00090 5F6F      SUBI	R22,0xFF
+    00091 4F7F      SBCI	R23,0xFF
+    00092 306A      CPI	R22,0xA
+    00093 E0E0      LDI	R30,0
+    00094 077E      CPC	R23,R30
+    00095 F3D0      BCS	0x0090
+    00096 5F4F      SUBI	R20,0xFF
+    00097 4F5F      SBCI	R21,0xFF
+    00098 1740      CP	R20,R16
+    00099 0751      CPC	R21,R17
+    0009A F390      BCS	0x008D
+    0009B 940C 0107 JMP	pop_xgsetF000
+_SPI_595:
+  temp                 --> R10
+  i                    --> R20
+  out_data             --> R22
+    0009D 940E 010C CALL	push_xgsetF00C
+    0009F 01B8      MOVW	R22,R16
+(0035)      }
+(0036) 	 
+(0037) 	 
+(0038) void SPI_595(int out_data)
+(0039) {
+(0040) 	int i,temp;
+(0041)  	for(i=0;i<8;i++)
+    000A0 2744      CLR	R20
+    000A1 2755      CLR	R21
+(0042)   	{
+(0043) 		
+(0044) 		//Delay(1);
+(0045)      	temp=out_data&0x80;
+    000A2 01CB      MOVW	R24,R22
+    000A3 7880      ANDI	R24,0x80
+    000A4 7090      ANDI	R25,0
+    000A5 015C      MOVW	R10,R24
+(0046)      	if(temp==0x80)
+    000A6 3880      CPI	R24,0x80
+    000A7 E0E0      LDI	R30,0
+    000A8 079E      CPC	R25,R30
+    000A9 F411      BNE	0x00AC
+(0047)         SDK1;
+    000AA 9ADD      SBI	0x1B,5
+    000AB C001      RJMP	0x00AD
+(0048)         else SDK0; 
+    000AC 98DD      CBI	0x1B,5
+(0049) 		   
+(0050)      	out_data=out_data<<1;
+    000AD 0F66      LSL	R22
+    000AE 1F77      ROL	R23
+(0051) 		CLK0;
+    000AF 98DE      CBI	0x1B,6
+(0052) 		Delay(5);
+    000B0 E005      LDI	R16,5
+    000B1 E010      LDI	R17,0
+    000B2 DFC0      RCALL	_Delay
+(0053)      	CLK1;
+    000B3 9ADE      SBI	0x1B,6
+(0054) 		Delay(5);
+    000B4 E005      LDI	R16,5
+    000B5 E010      LDI	R17,0
+    000B6 DFBC      RCALL	_Delay
+    000B7 5F4F      SUBI	R20,0xFF
+    000B8 4F5F      SBCI	R21,0xFF
+    000B9 3048      CPI	R20,0x8
+    000BA E0E0      LDI	R30,0
+    000BB 075E      CPC	R21,R30
+    000BC F32C      BLT	0x00A2
+    000BD 940C 0113 JMP	pop_xgsetF00C
+(0055) 	}
+(0056) 	
+(0057) }	 
+(0058) 
+(0059) void main(void)
+(0060) { 
+(0061)      DDRA=0XFF;//7位为输出，其他位输入
+_main:
+    000BF EF8F      LDI	R24,0xFF
+    000C0 BB8A      OUT	0x1A,R24
+(0062) 	 PORTA=0X00;//
+    000C1 2422      CLR	R2
+    000C2 BA2B      OUT	0x1B,R2
+    000C3 C03C      RJMP	0x0100
+(0063)   
+(0064)     while(1)
+(0065)    {
+(0066)     if (tabnum==18)tabnum=0;
+    000C4 9180 0100 LDS	R24,tabnum
+    000C6 3182      CPI	R24,0x12
+    000C7 F419      BNE	0x00CB
+    000C8 2422      CLR	R2
+    000C9 9220 0100 STS	tabnum,R2
+(0067) 	
+(0068) 	LOAD0;	
+    000CB 98DF      CBI	0x1B,7
+(0069) 	Delay(800);
+    000CC E200      LDI	R16,0x20
+    000CD E013      LDI	R17,3
+    000CE DFA4      RCALL	_Delay
+(0070) 	SPI_595(Tab[tabnum]);
+    000CF E081      LDI	R24,1
+    000D0 E091      LDI	R25,1
+    000D1 91E0 0100 LDS	R30,tabnum
+    000D3 27FF      CLR	R31
+    000D4 0FE8      ADD	R30,R24
+    000D5 1FF9      ADC	R31,R25
+    000D6 8100      LD	R16,Z
+    000D7 2711      CLR	R17
+    000D8 DFC4      RCALL	_SPI_595
+(0071) 	SPI_595(Tab[tabnum]);
+    000D9 E081      LDI	R24,1
+    000DA E091      LDI	R25,1
+    000DB 91E0 0100 LDS	R30,tabnum
+    000DD 27FF      CLR	R31
+    000DE 0FE8      ADD	R30,R24
+    000DF 1FF9      ADC	R31,R25
+    000E0 8100      LD	R16,Z
+    000E1 2711      CLR	R17
+    000E2 DFBA      RCALL	_SPI_595
+(0072) 	SPI_595(Tab[tabnum]);
+    000E3 E081      LDI	R24,1
+    000E4 E091      LDI	R25,1
+    000E5 91E0 0100 LDS	R30,tabnum
+    000E7 27FF      CLR	R31
+    000E8 0FE8      ADD	R30,R24
+    000E9 1FF9      ADC	R31,R25
+    000EA 8100      LD	R16,Z
+    000EB 2711      CLR	R17
+    000EC DFB0      RCALL	_SPI_595
+(0073) 	SPI_595(Tab[tabnum]);
+    000ED E081      LDI	R24,1
+    000EE E091      LDI	R25,1
+    000EF 91E0 0100 LDS	R30,tabnum
+    000F1 27FF      CLR	R31
+    000F2 0FE8      ADD	R30,R24
+    000F3 1FF9      ADC	R31,R25
+    000F4 8100      LD	R16,Z
+    000F5 2711      CLR	R17
+    000F6 DFA6      RCALL	_SPI_595
+(0074) 	
+(0075) 
+(0076) 	//Delay(800);
+(0077) 	LOAD1;
+    000F7 9ADF      SBI	0x1B,7
+(0078) 	
+(0079) 	
+(0080) 	
+(0081) 	Delay(800);
+    000F8 E200      LDI	R16,0x20
+    000F9 E013      LDI	R17,3
+    000FA DF78      RCALL	_Delay
+(0082) 	
+(0083) 	++tabnum;
+FILE: <library>
+    000FB 9180 0100 LDS	R24,tabnum
+    000FD 5F8F      SUBI	R24,0xFF
+    000FE 9380 0100 STS	tabnum,R24
+    00100 CFC3      RJMP	0x00C4
+    00101 9508      RET
+push_xgsetF000:
+    00102 937A      ST	-Y,R23
+    00103 936A      ST	-Y,R22
+    00104 935A      ST	-Y,R21
+    00105 934A      ST	-Y,R20
+    00106 9508      RET
+pop_xgsetF000:
+    00107 9149      LD	R20,Y+
+    00108 9159      LD	R21,Y+
+    00109 9169      LD	R22,Y+
+    0010A 9179      LD	R23,Y+
+    0010B 9508      RET
+push_xgsetF00C:
+    0010C 937A      ST	-Y,R23
+    0010D 936A      ST	-Y,R22
+    0010E 935A      ST	-Y,R21
+    0010F 934A      ST	-Y,R20
+    00110 92BA      ST	-Y,R11
+    00111 92AA      ST	-Y,R10
+    00112 9508      RET
+pop_xgsetF00C:
+    00113 90A9      LD	R10,Y+
+    00114 90B9      LD	R11,Y+
+    00115 9149      LD	R20,Y+
+    00116 9159      LD	R21,Y+
+    00117 9169      LD	R22,Y+
+    00118 9179      LD	R23,Y+
+    00119 9508      RET

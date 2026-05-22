@@ -1,0 +1,401 @@
+                        .module _595.c
+                        .area text(rom, con, rel)
+ 0000                   .dbfile 595.c
+                        .area data(ram, con, rel)
+ 0000                   .dbfile 595.c
+ 0000           _tabnum::
+ 0000                   .blkb 1
+                        .area idata
+ 0000 00                .byte 0
+                        .area data(ram, con, rel)
+ 0001                   .dbfile 595.c
+ 0001                   .dbfile C:\Users\Dan7\Desktop\PIVHC\74HC595SHOW\595.c
+ 0001                   .dbsym e tabnum _tabnum c
+ 0001           _Tab::
+ 0001                   .blkb 2
+                        .area idata
+ 0001 C0CF              .byte 192,207
+                        .area data(ram, con, rel)
+ 0003                   .dbfile C:\Users\Dan7\Desktop\PIVHC\74HC595SHOW\595.c
+ 0003                   .blkb 2
+                        .area idata
+ 0003 A4B0              .byte 164,176
+                        .area data(ram, con, rel)
+ 0005                   .dbfile C:\Users\Dan7\Desktop\PIVHC\74HC595SHOW\595.c
+ 0005                   .blkb 2
+                        .area idata
+ 0005 9992              .byte 153,146
+                        .area data(ram, con, rel)
+ 0007                   .dbfile C:\Users\Dan7\Desktop\PIVHC\74HC595SHOW\595.c
+ 0007                   .blkb 2
+                        .area idata
+ 0007 82F8              .byte 130,248
+                        .area data(ram, con, rel)
+ 0009                   .dbfile C:\Users\Dan7\Desktop\PIVHC\74HC595SHOW\595.c
+ 0009                   .blkb 2
+                        .area idata
+ 0009 8090              .byte 128,144
+                        .area data(ram, con, rel)
+ 000B                   .dbfile C:\Users\Dan7\Desktop\PIVHC\74HC595SHOW\595.c
+ 000B                   .blkb 2
+                        .area idata
+ 000B 8883              .byte 136,131
+                        .area data(ram, con, rel)
+ 000D                   .dbfile C:\Users\Dan7\Desktop\PIVHC\74HC595SHOW\595.c
+ 000D                   .blkb 2
+                        .area idata
+ 000D C6A1              .byte 198,161
+                        .area data(ram, con, rel)
+ 000F                   .dbfile C:\Users\Dan7\Desktop\PIVHC\74HC595SHOW\595.c
+ 000F                   .blkb 2
+                        .area idata
+ 000F 868E              .byte 134,142
+                        .area data(ram, con, rel)
+ 0011                   .dbfile C:\Users\Dan7\Desktop\PIVHC\74HC595SHOW\595.c
+ 0011                   .blkb 2
+                        .area idata
+ 0011 FF7F              .byte 255,127
+                        .area data(ram, con, rel)
+ 0013                   .dbfile C:\Users\Dan7\Desktop\PIVHC\74HC595SHOW\595.c
+ 0013                   .dbsym e Tab _Tab A[18:18]c
+                        .area text(rom, con, rel)
+ 0000                   .dbfile C:\Users\Dan7\Desktop\PIVHC\74HC595SHOW\595.c
+ 0000                   .dbfunc e Delay _Delay fV
+ 0000           ;              i -> R20,R21
+ 0000           ;              j -> R22,R23
+ 0000           ;          times -> R16,R17
+                        .even
+ 0000           _Delay::
+ 0000 0E940000          xcall push_xgsetF000
+ 0004                   .dbline -1
+ 0004                   .dbline 25
+ 0004           ; #include <iom128v.h>
+ 0004           ; #include <macros.h>
+ 0004           ; 
+ 0004           ; #define uchar       unsigned char
+ 0004           ; #define uint        unsigned int
+ 0004           ; #define ulint       unsigned long int
+ 0004           ; 
+ 0004           ; #define SDK1             PORTA|=BIT(5)
+ 0004           ; #define SDK0             PORTA&=~BIT(5)
+ 0004           ; 
+ 0004           ; #define CLK1             PORTA|=BIT(6)
+ 0004           ; #define CLK0             PORTA&=~BIT(6)
+ 0004           ; 
+ 0004           ; #define LOAD1             PORTA|=BIT(7)
+ 0004           ; #define LOAD0             PORTA&=~BIT(7)
+ 0004           ; 
+ 0004           ; 
+ 0004           ; uchar tabnum=0;
+ 0004           ; uchar Tab[]={0xc0,0xcf,0xa4,0xb0,0x99,0x92,0x82,0xf8,0x80,0x90,0x88,0x83,0xc6,0xa1,0x86,0x8e,0xff,0x7f};
+ 0004           ; //0 1 2 3 4 5 6 7 8 9 A B C D F 灭 . //  共阳数码管
+ 0004           ; 
+ 0004           ; 
+ 0004           ; 
+ 0004           ; void Delay(uint times)//空延时语句500us
+ 0004           ;  {uint i;
+ 0004                   .dbline 27
+ 0004           ;   uint j; 
+ 0004           ;  for(i=0;i<times;i++)
+ 0004 4427              clr R20
+ 0006 5527              clr R21
+ 0008 0BC0              xjmp L5
+ 000A           L2:
+ 000A                   .dbline 28
+ 000A           ;   for(j=0;j<500;j++); 
+ 000A 6627              clr R22
+ 000C 7727              clr R23
+ 000E 02C0              xjmp L9
+ 0010           L6:
+ 0010                   .dbline 28
+ 0010           L7:
+ 0010                   .dbline 28
+ 0010 6F5F              subi R22,255  ; offset = 1
+ 0012 7F4F              sbci R23,255
+ 0014           L9:
+ 0014                   .dbline 28
+ 0014 643F              cpi R22,244
+ 0016 E1E0              ldi R30,1
+ 0018 7E07              cpc R23,R30
+ 001A D0F3              brlo L6
+ 001C           X0:
+ 001C           L3:
+ 001C                   .dbline 27
+ 001C 4F5F              subi R20,255  ; offset = 1
+ 001E 5F4F              sbci R21,255
+ 0020           L5:
+ 0020                   .dbline 27
+ 0020 4017              cp R20,R16
+ 0022 5107              cpc R21,R17
+ 0024 90F3              brlo L2
+ 0026           X1:
+ 0026                   .dbline -2
+ 0026           L1:
+ 0026                   .dbline 0 ; func end
+ 0026 0C940000          xjmp pop_xgsetF000
+ 002A                   .dbsym r i 20 i
+ 002A                   .dbsym r j 22 i
+ 002A                   .dbsym r times 16 i
+ 002A                   .dbend
+ 002A                   .dbfunc e Delay1 _Delay1 fV
+ 002A           ;              i -> R20,R21
+ 002A           ;              j -> R22,R23
+ 002A           ;          times -> R16,R17
+                        .even
+ 002A           _Delay1::
+ 002A 0E940000          xcall push_xgsetF000
+ 002E                   .dbline -1
+ 002E                   .dbline 31
+ 002E           ;      }
+ 002E           ; void Delay1(uint times)//空延时语句10us
+ 002E           ;  {uint i;
+ 002E                   .dbline 33
+ 002E           ;   uint j; 
+ 002E           ;  for(i=0;i<times;i++)
+ 002E 4427              clr R20
+ 0030 5527              clr R21
+ 0032 0BC0              xjmp L14
+ 0034           L11:
+ 0034                   .dbline 34
+ 0034           ;   for(j=0;j<10;j++); 
+ 0034 6627              clr R22
+ 0036 7727              clr R23
+ 0038 02C0              xjmp L18
+ 003A           L15:
+ 003A                   .dbline 34
+ 003A           L16:
+ 003A                   .dbline 34
+ 003A 6F5F              subi R22,255  ; offset = 1
+ 003C 7F4F              sbci R23,255
+ 003E           L18:
+ 003E                   .dbline 34
+ 003E 6A30              cpi R22,10
+ 0040 E0E0              ldi R30,0
+ 0042 7E07              cpc R23,R30
+ 0044 D0F3              brlo L15
+ 0046           X2:
+ 0046           L12:
+ 0046                   .dbline 33
+ 0046 4F5F              subi R20,255  ; offset = 1
+ 0048 5F4F              sbci R21,255
+ 004A           L14:
+ 004A                   .dbline 33
+ 004A 4017              cp R20,R16
+ 004C 5107              cpc R21,R17
+ 004E 90F3              brlo L11
+ 0050           X3:
+ 0050                   .dbline -2
+ 0050           L10:
+ 0050                   .dbline 0 ; func end
+ 0050 0C940000          xjmp pop_xgsetF000
+ 0054                   .dbsym r i 20 i
+ 0054                   .dbsym r j 22 i
+ 0054                   .dbsym r times 16 i
+ 0054                   .dbend
+ 0054                   .dbfunc e SPI_595 _SPI_595 fV
+ 0054           ;           temp -> R10,R11
+ 0054           ;              i -> R20,R21
+ 0054           ;       out_data -> R22,R23
+                        .even
+ 0054           _SPI_595::
+ 0054 0E940000          xcall push_xgsetF00C
+ 0058 B801              movw R22,R16
+ 005A                   .dbline -1
+ 005A                   .dbline 39
+ 005A           ;      }
+ 005A           ;        
+ 005A           ;        
+ 005A           ; void SPI_595(int out_data)
+ 005A           ; {
+ 005A                   .dbline 41
+ 005A           ;       int i,temp;
+ 005A           ;       for(i=0;i<8;i++)
+ 005A 4427              clr R20
+ 005C 5527              clr R21
+ 005E           L20:
+ 005E                   .dbline 42
+ 005E           ;       {
+ 005E                   .dbline 45
+ 005E           ;               
+ 005E           ;               //Delay(1);
+ 005E           ;       temp=out_data&0x80;
+ 005E CB01              movw R24,R22
+ 0060 8078              andi R24,128
+ 0062 9070              andi R25,0
+ 0064 5C01              movw R10,R24
+ 0066                   .dbline 46
+ 0066           ;       if(temp==0x80)
+ 0066 8038              cpi R24,128
+ 0068 E0E0              ldi R30,0
+ 006A 9E07              cpc R25,R30
+ 006C 11F4              brne L24
+ 006E           X4:
+ 006E                   .dbline 47
+ 006E           ;         SDK1;
+ 006E DD9A              sbi 0x1b,5
+ 0070 01C0              xjmp L25
+ 0072           L24:
+ 0072                   .dbline 48
+ 0072           ;         else SDK0; 
+ 0072 DD98              cbi 0x1b,5
+ 0074           L25:
+ 0074                   .dbline 50
+ 0074           ;                  
+ 0074           ;       out_data=out_data<<1;
+ 0074 660F              lsl R22
+ 0076 771F              rol R23
+ 0078                   .dbline 51
+ 0078           ;               CLK0;
+ 0078 DE98              cbi 0x1b,6
+ 007A                   .dbline 52
+ 007A           ;               Delay(5);
+ 007A 05E0              ldi R16,5
+ 007C 10E0              ldi R17,0
+ 007E C0DF              xcall _Delay
+ 0080                   .dbline 53
+ 0080           ;       CLK1;
+ 0080 DE9A              sbi 0x1b,6
+ 0082                   .dbline 54
+ 0082           ;               Delay(5);
+ 0082 05E0              ldi R16,5
+ 0084 10E0              ldi R17,0
+ 0086 BCDF              xcall _Delay
+ 0088                   .dbline 55
+ 0088           ;       }
+ 0088           L21:
+ 0088                   .dbline 41
+ 0088 4F5F              subi R20,255  ; offset = 1
+ 008A 5F4F              sbci R21,255
+ 008C                   .dbline 41
+ 008C 4830              cpi R20,8
+ 008E E0E0              ldi R30,0
+ 0090 5E07              cpc R21,R30
+ 0092 2CF3              brlt L20
+ 0094           X5:
+ 0094                   .dbline -2
+ 0094           L19:
+ 0094                   .dbline 0 ; func end
+ 0094 0C940000          xjmp pop_xgsetF00C
+ 0098                   .dbsym r temp 10 I
+ 0098                   .dbsym r i 20 I
+ 0098                   .dbsym r out_data 22 I
+ 0098                   .dbend
+ 0098                   .dbfunc e main _main fV
+                        .even
+ 0098           _main::
+ 0098                   .dbline -1
+ 0098                   .dbline 60
+ 0098           ;       
+ 0098           ; }      
+ 0098           ; 
+ 0098           ; void main(void)
+ 0098           ; { 
+ 0098                   .dbline 61
+ 0098           ;      DDRA=0XFF;//7位为输出，其他位输入
+ 0098 8FEF              ldi R24,255
+ 009A 8ABB              out 0x1a,R24
+ 009C                   .dbline 62
+ 009C           ;        PORTA=0X00;//
+ 009C 2224              clr R2
+ 009E 2BBA              out 0x1b,R2
+ 00A0 3CC0              xjmp L28
+ 00A2           L27:
+ 00A2                   .dbline 65
+ 00A2           ;   
+ 00A2           ;     while(1)
+ 00A2           ;    {
+ 00A2                   .dbline 66
+ 00A2           ;     if (tabnum==18)tabnum=0;
+ 00A2 80910000          lds R24,_tabnum
+ 00A6 8231              cpi R24,18
+ 00A8 19F4              brne L30
+ 00AA           X6:
+ 00AA                   .dbline 66
+ 00AA 2224              clr R2
+ 00AC 20920000          sts _tabnum,R2
+ 00B0           L30:
+ 00B0                   .dbline 68
+ 00B0           ;       
+ 00B0           ;       LOAD0;  
+ 00B0 DF98              cbi 0x1b,7
+ 00B2                   .dbline 69
+ 00B2           ;       Delay(800);
+ 00B2 00E2              ldi R16,800
+ 00B4 13E0              ldi R17,3
+ 00B6 A4DF              xcall _Delay
+ 00B8                   .dbline 70
+ 00B8           ;       SPI_595(Tab[tabnum]);
+ 00B8 80E0              ldi R24,<_Tab
+ 00BA 90E0              ldi R25,>_Tab
+ 00BC E0910000          lds R30,_tabnum
+ 00C0 FF27              clr R31
+ 00C2 E80F              add R30,R24
+ 00C4 F91F              adc R31,R25
+ 00C6 0081              ldd R16,z+0
+ 00C8 1127              clr R17
+ 00CA C4DF              xcall _SPI_595
+ 00CC                   .dbline 71
+ 00CC           ;       SPI_595(Tab[tabnum]);
+ 00CC 80E0              ldi R24,<_Tab
+ 00CE 90E0              ldi R25,>_Tab
+ 00D0 E0910000          lds R30,_tabnum
+ 00D4 FF27              clr R31
+ 00D6 E80F              add R30,R24
+ 00D8 F91F              adc R31,R25
+ 00DA 0081              ldd R16,z+0
+ 00DC 1127              clr R17
+ 00DE BADF              xcall _SPI_595
+ 00E0                   .dbline 72
+ 00E0           ;       SPI_595(Tab[tabnum]);
+ 00E0 80E0              ldi R24,<_Tab
+ 00E2 90E0              ldi R25,>_Tab
+ 00E4 E0910000          lds R30,_tabnum
+ 00E8 FF27              clr R31
+ 00EA E80F              add R30,R24
+ 00EC F91F              adc R31,R25
+ 00EE 0081              ldd R16,z+0
+ 00F0 1127              clr R17
+ 00F2 B0DF              xcall _SPI_595
+ 00F4                   .dbline 73
+ 00F4           ;       SPI_595(Tab[tabnum]);
+ 00F4 80E0              ldi R24,<_Tab
+ 00F6 90E0              ldi R25,>_Tab
+ 00F8 E0910000          lds R30,_tabnum
+ 00FC FF27              clr R31
+ 00FE E80F              add R30,R24
+ 0100 F91F              adc R31,R25
+ 0102 0081              ldd R16,z+0
+ 0104 1127              clr R17
+ 0106 A6DF              xcall _SPI_595
+ 0108                   .dbline 77
+ 0108           ;       
+ 0108           ; 
+ 0108           ;       //Delay(800);
+ 0108           ;       LOAD1;
+ 0108 DF9A              sbi 0x1b,7
+ 010A                   .dbline 81
+ 010A           ;       
+ 010A           ;       
+ 010A           ;       
+ 010A           ;       Delay(800);
+ 010A 00E2              ldi R16,800
+ 010C 13E0              ldi R17,3
+ 010E 78DF              xcall _Delay
+ 0110                   .dbline 83
+ 0110           ;       
+ 0110           ;       ++tabnum;
+ 0110 80910000          lds R24,_tabnum
+ 0114 8F5F              subi R24,255    ; addi 1
+ 0116 80930000          sts _tabnum,R24
+ 011A                   .dbline 84
+ 011A           ;       }
+ 011A           L28:
+ 011A                   .dbline 64
+ 011A C3CF              xjmp L27
+ 011C           X7:
+ 011C                   .dbline -2
+ 011C           L26:
+ 011C                   .dbline 0 ; func end
+ 011C 0895              ret
+ 011E                   .dbend
+ 011E           ; }  

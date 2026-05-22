@@ -69,10 +69,16 @@ void Error_Handler(void);
 #define Btn3_GPIO_Port GPIOB
 #define Btn4_Pin GPIO_PIN_1
 #define Btn4_GPIO_Port GPIOB
+#define Reset_Btn_Pin GPIO_PIN_15
+#define Reset_Btn_GPIO_Port GPIOA
 #define Btn1_Pin GPIO_PIN_3
 #define Btn1_GPIO_Port GPIOB
 #define Btn2_Pin GPIO_PIN_4
 #define Btn2_GPIO_Port GPIOB
+#define Relay_24_Pin GPIO_PIN_5
+#define Relay_24_GPIO_Port GPIOB
+#define Relay_220_Pin GPIO_PIN_6
+#define Relay_220_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

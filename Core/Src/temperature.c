@@ -12,8 +12,8 @@
 #define TEMP_CHANNEL_NUM    8
 #define TEMP_SENSOR_FAULT   -5000   /* 传感器故障特殊值 */
 
-/* 温度阈值 (单位：℃)，超过此值 LED 点亮 */
-#define TEMP_THRESHOLD      30.0f
+/* 外部阈值变量 (在 main.c 中设置) */
+extern uint16_t g_temp_threshold;
 
 float temperature[TEMP_CHANNEL_NUM] = {0};
 uint8_t temp_valid[TEMP_CHANNEL_NUM] = {0};  /* 1=有效，0=传感器故障 */
@@ -72,7 +72,7 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
             temp_valid[i] = 1;  /* 标记为有效 */
             
             /* 检查是否超过阈值 */
-            if (temperature[i] >= TEMP_THRESHOLD)
+            if (temperature[i] >= (float)g_temp_threshold)
             {
                 alarm_flag = 1;
             }

@@ -20,6 +20,8 @@ uint8_t temp_valid[TEMP_CHANNEL_NUM] = {0};  /* 1=有效，0=传感器故障 */
 
 /* 温度告警标志 */
 uint8_t temp_alarm = 0;  /* 1=有通道超温，0=正常 */
+uint8_t temp_alarm_latched = 0;  /* 警报锁定标志 - 按下复位键前保持警报 */
+uint8_t temp_alarm_force_reset = 0;  /* 强制复位标志 - 按下复位键后暂时忽略超温 */
 
 /**
  * @brief 解析 Modbus 0x04 命令返回的温度数据
@@ -82,8 +84,26 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
     /* 更新告警标志 */
     temp_alarm = alarm_flag;
 
-    /* 根据告警状态控制 LED (低电平点亮) */
-    if (temp_alarm)
+    /* 警报锁定逻辑：一旦超温，锁定警报状态，直到按下复位键 */
+    if (temp_alarm_force_reset)
+    {
+        /* 强制复位模式：即使超温也不锁定警报 */
+        temp_alarm_latched = 0;
+        
+        /* 如果温度已恢复正常，清除强制复位标志，恢复自动报警功能 */
+        if (!temp_alarm)
+        {
+            temp_alarm_force_reset = 0;
+        }
+    }
+    else if (temp_alarm)
+    {
+        /* 有超温且无复位请求，锁定警报 */
+        temp_alarm_latched = 1;
+    }
+
+    /* 根据锁定警报状态控制 LED (低电平点亮) */
+    if (temp_alarm_latched)
     {
         HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);  /* 点亮 LED */
     }
@@ -91,7 +111,7 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
     {
         HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);  /* 熄灭 LED */
     }
-    
+
     return 0;  /* 解析成功 */
 }
 
@@ -121,4 +141,13 @@ uint8_t Get_Temp_Valid(uint8_t channel)
         return 0;
     }
     return temp_valid[channel];
+}
+
+/**
+ * @brief 复位警报（清除锁定状态）
+ */
+void TEMP_Alarm_Reset(void)
+{
+    /* 设置强制复位标志，下次温度解析时会忽略超温状态 */
+    temp_alarm_force_reset = 1;
 }

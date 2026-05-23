@@ -25,6 +25,7 @@ typedef enum {
     KEY_ID_ADD,        /* 加键 - Btn2 */
     KEY_ID_SUB,        /* 减键 - Btn3 */
     KEY_ID_SHIFT,      /* 左移切换键 - Btn4 */
+    KEY_ID_RESET,      /* 复位键 - Reset_Btn */
     KEY_ID_COUNT       /* 按键总数 */
 } KeyId_t;
 

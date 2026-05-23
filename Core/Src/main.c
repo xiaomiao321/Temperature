@@ -155,6 +155,13 @@ int main(void) {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    /* 处理按键和显示 - 先处理按键，让复位请求优先响应 */
+    TEMP_SETTING_Handler();
+    TEMP_SETTING_Display();
+
+    /* 更新阈值到全局变量 */
+    g_temp_threshold = TEMP_SETTING_GetValue();
+
     /* 从 UART2 读取一帧数据 */
     uart2_rx_len = 0;
 
@@ -181,13 +188,6 @@ int main(void) {
         }
       }
     }
-
-    /* 处理按键和显示 */
-    TEMP_SETTING_Handler();
-    TEMP_SETTING_Display();
-
-    /* 更新阈值到全局变量 */
-    g_temp_threshold = TEMP_SETTING_GetValue();
 
     /* 短暂延时 */
     HAL_Delay(10);

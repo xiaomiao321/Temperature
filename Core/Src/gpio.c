@@ -79,10 +79,10 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Reset_Btn_Pin */
+  /*Configure GPIO pin : Reset_Btn_Pin - 内部上拉，按下为低电平 */
   GPIO_InitStruct.Pin = Reset_Btn_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(Reset_Btn_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : Relay_24_Pin Relay_220_Pin */

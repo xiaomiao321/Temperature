@@ -8,6 +8,7 @@
 #include "key.h"
 #include "hc595.h"
 #include "main.h"
+#include "temperature.h"
 
 /* 全局变量 */
 static SetMode_t g_setMode = SET_MODE_NORMAL;     /* 当前模式 */
@@ -156,15 +157,30 @@ static void handle_shift_key(void)
     {
         return;
     }
-    
+
     if (KEY_Scan(KEY_ID_SHIFT))
     {
         /* 切换设置位置：个位 -> 十位 -> 百位 -> 个位 循环 */
         g_setPos = (SetPos_t)((g_setPos + 1) % 3);
-        
+
         /* 重置闪烁状态和时间 */
         g_blinkState = 1;
         g_lastBlinkTime = HAL_GetTick();
+    }
+}
+
+/**
+ * @brief  处理复位键 (解除警报锁定)
+ */
+static void handle_reset_key(void)
+{
+    if (KEY_Scan(KEY_ID_RESET))
+    {
+        /* 调试：按下复位键时翻转 LED 状态，验证按键被检测到 */
+        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+        
+        /* 复位警报 */
+        TEMP_Alarm_Reset();
     }
 }
 
@@ -226,6 +242,7 @@ void TEMP_SETTING_Handler(void)
     handle_add_key();
     handle_sub_key();
     handle_shift_key();
+    handle_reset_key();  /* 处理复位键 */
     handle_blink();
 }
 

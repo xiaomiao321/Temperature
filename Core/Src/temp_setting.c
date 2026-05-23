@@ -1,7 +1,7 @@
 /*
  * @file     temp_setting.c
- * @brief    温度阈值设置模块
- * @version  v1.0
+ * @brief    温度阈值设置模块 - 支持两组独立阈值
+ * @version  v2.0
  */
 
 #include "temp_setting.h"
@@ -13,20 +13,26 @@
 /* 全局变量 */
 static SetMode_t g_setMode = SET_MODE_NORMAL;     /* 当前模式 */
 static SetPos_t g_setPos = SET_POS_UNIT;          /* 当前设置位 */
-static uint16_t g_setValue = 30;                  /* 设置值 (默认 30℃) */
+static SetGroup_t g_currentGroup = SET_GROUP_1;   /* 当前设置的组 */
+static uint16_t g_setValue1 = 30;                 /* 第一组设置值 (默认 30℃) */
+static uint16_t g_setValue2 = 30;                 /* 第二组设置值 (默认 30℃) */
 static uint8_t g_blinkState = 1;                  /* 闪烁状态 (1-亮，0-灭) */
 static uint32_t g_lastBlinkTime = 0;              /* 上次闪烁时间 */
+static uint32_t g_setPressTime = 0;               /* SET 键按下时间 */
+static uint8_t g_longPressDetected = 0;           /* 长按标志 */
 
-/* 调试用全局变量 - 可在调试器中查看 */
-uint16_t DBG_setValue = 30;       /* 当前设置值 */
+/* 调试用全局变量 */
+uint16_t DBG_setValue1 = 30;      /* 第一组设置值 */
+uint16_t DBG_setValue2 = 30;      /* 第二组设置值 */
 uint8_t DBG_setMode = 0;          /* 0=正常模式，1=设置模式 */
 uint8_t DBG_setPos = 2;           /* 0=百位，1=十位，2=个位 */
 uint8_t DBG_blinkState = 1;       /* 闪烁状态 */
+uint8_t DBG_currentGroup = 0;     /* 当前设置的组 */
 uint8_t DBG_seg_d1 = 0;           /* 百位显示值 */
 uint8_t DBG_seg_d2 = 0;           /* 十位显示值 */
 uint8_t DBG_seg_d3 = 0;           /* 个位显示值 */
 
-/* 外部温度阈值变量 (在 temperature.c 中定义) */
+/* 外部温度变量 */
 extern float temperature[8];
 extern uint8_t temp_alarm;
 
@@ -41,23 +47,29 @@ void TEMP_SETTING_Init(void)
     HC595_TestAllOff();   /* 全灭 */
     HAL_Delay(200);
     HC595_1_DisplayNumber(123);  /* 显示 123 */
-    HC595_2_DisplayNumber(123);
+    HC595_2_DisplayNumber(456);  /* 第二组显示不同值 */
     HAL_Delay(500);
-    HC595_1_DisplayNumber(456);  /* 显示 456 */
-    HC595_2_DisplayNumber(456);
-    HAL_Delay(500);
-    HC595_1_DisplayNumber(0);    /* 显示 000 */
-    HC595_2_DisplayNumber(0);
+    HC595_1_DisplayNumber(30);   /* 显示默认阈值 1 */
+    HC595_2_DisplayNumber(30);   /* 显示默认阈值 2 */
     HAL_Delay(300);
 
     g_setMode = SET_MODE_NORMAL;
     g_setPos = SET_POS_UNIT;
+    g_currentGroup = SET_GROUP_1;
     g_blinkState = 1;
     g_lastBlinkTime = HAL_GetTick();
 }
 
 /**
- * @brief  处理 SET 键 (确认/切换模式)
+ * @brief  获取当前组的设置值指针
+ */
+static uint16_t* get_current_value_ptr(void)
+{
+    return (g_currentGroup == SET_GROUP_1) ? &g_setValue1 : &g_setValue2;
+}
+
+/**
+ * @brief  处理 SET 键 (确认/切换模式/长按切换组)
  */
 static void handle_set_key(void)
 {
@@ -72,15 +84,38 @@ static void handle_set_key(void)
             g_setPos = SET_POS_UNIT;
             g_blinkState = 1;
             g_lastBlinkTime = HAL_GetTick();
+            g_longPressDetected = 0;
+            g_setPressTime = HAL_GetTick();
         }
         else
         {
             /* 确认设置，返回正常模式 */
             g_setMode = SET_MODE_NORMAL;
             g_blinkState = 1;  /* 停止闪烁，全亮 */
+        }
+    }
+}
 
-            /* 更新温度阈值 */
-            // 在 main.c 中处理
+/**
+ * @brief  检测 SET 键长按
+ */
+static void check_long_press(void)
+{
+    if (g_setMode == SET_MODE_EDIT && !g_longPressDetected)
+    {
+        /* 检查 SET 键是否仍被按下 */
+        if (KEY_ReadPin(KEY_ID_SET) == 0)  /* 低电平表示按下 */
+        {
+            if (HAL_GetTick() - g_setPressTime >= LONG_PRESS_THRESHOLD)
+            {
+                g_longPressDetected = 1;
+                /* 切换组 */
+                g_currentGroup = (g_currentGroup == SET_GROUP_1) ? SET_GROUP_2 : SET_GROUP_1;
+                /* 重置设置位 */
+                g_setPos = SET_POS_UNIT;
+                g_blinkState = 1;
+                g_lastBlinkTime = HAL_GetTick();
+            }
         }
     }
 }
@@ -90,6 +125,8 @@ static void handle_set_key(void)
  */
 static void handle_add_key(void)
 {
+    uint16_t *val = get_current_value_ptr();
+    
     if (g_setMode != SET_MODE_EDIT)
     {
         return;
@@ -103,19 +140,19 @@ static void handle_add_key(void)
         switch (g_setPos)
         {
             case SET_POS_HUNDRED:
-                digit = (g_setValue / 100) % 10;
+                digit = (*val / 100) % 10;
                 digit = (digit + 1) % 10;
-                g_setValue = (g_setValue % 100) + digit * 100;
+                *val = (*val % 100) + digit * 100;
                 break;
             case SET_POS_TEN:
-                digit = (g_setValue / 10) % 10;
+                digit = (*val / 10) % 10;
                 digit = (digit + 1) % 10;
-                g_setValue = (g_setValue % 10) + digit * 10 + (g_setValue / 100) * 100;
+                *val = (*val % 10) + digit * 10 + (*val / 100) * 100;
                 break;
             case SET_POS_UNIT:
-                digit = g_setValue % 10;
+                digit = *val % 10;
                 digit = (digit + 1) % 10;
-                g_setValue = (g_setValue / 10) * 10 + digit;
+                *val = (*val / 10) * 10 + digit;
                 break;
         }
     }
@@ -126,6 +163,8 @@ static void handle_add_key(void)
  */
 static void handle_sub_key(void)
 {
+    uint16_t *val = get_current_value_ptr();
+    
     if (g_setMode != SET_MODE_EDIT)
     {
         return;
@@ -139,19 +178,19 @@ static void handle_sub_key(void)
         switch (g_setPos)
         {
             case SET_POS_HUNDRED:
-                digit = (g_setValue / 100) % 10;
+                digit = (*val / 100) % 10;
                 digit = (digit + 9) % 10;  /* -1 等效于 +9 再取模 */
-                g_setValue = (g_setValue % 100) + digit * 100;
+                *val = (*val % 100) + digit * 100;
                 break;
             case SET_POS_TEN:
-                digit = (g_setValue / 10) % 10;
+                digit = (*val / 10) % 10;
                 digit = (digit + 9) % 10;
-                g_setValue = (g_setValue % 10) + digit * 10 + (g_setValue / 100) * 100;
+                *val = (*val % 10) + digit * 10 + (*val / 100) * 100;
                 break;
             case SET_POS_UNIT:
-                digit = g_setValue % 10;
+                digit = *val % 10;
                 digit = (digit + 9) % 10;
-                g_setValue = (g_setValue / 10) * 10 + digit;
+                *val = (*val / 10) * 10 + digit;
                 break;
         }
     }
@@ -216,32 +255,46 @@ static void handle_blink(void)
 void TEMP_SETTING_Display(void)
 {
     uint8_t d1, d2, d3;  /* 百位、十位、个位 */
-
-    /* 分解数值 */
-    d3 = g_setValue % 10;         /* 个位 */
-    d2 = (g_setValue / 10) % 10;  /* 十位 */
-    d1 = (g_setValue / 100) % 10; /* 百位 */
+    uint16_t val1 = g_setValue1;
+    uint16_t val2 = g_setValue2;
 
     /* 更新调试变量 */
-    DBG_setValue = g_setValue;
+    DBG_setValue1 = val1;
+    DBG_setValue2 = val2;
     DBG_setMode = (uint8_t)g_setMode;
     DBG_setPos = (uint8_t)g_setPos;
     DBG_blinkState = g_blinkState;
-    DBG_seg_d1 = d1;
-    DBG_seg_d2 = d2;
-    DBG_seg_d3 = d3;
+    DBG_currentGroup = (uint8_t)g_currentGroup;
 
     if (g_setMode == SET_MODE_NORMAL)
     {
-        /* 正常模式 - 直接显示 */
-        HC595_1_Display3Digits(d1, d2, d3);  /* 第一组显示阈值 */
-        HC595_2_Display3Digits(d1, d2, d3);  /* 第二组显示阈值 */
+        /* 正常模式 - 两组分别显示各自的阈值 */
+        d3 = val1 % 10; d2 = (val1 / 10) % 10; d1 = (val1 / 100) % 10;
+        HC595_1_Display3Digits(d1, d2, d3);
+        
+        d3 = val2 % 10; d2 = (val2 / 10) % 10; d1 = (val2 / 100) % 10;
+        HC595_2_Display3Digits(d1, d2, d3);
     }
     else
     {
-        /* 设置模式 - 带闪烁显示 */
-        HC595_1_Display3DigitsWithBlink(d1, d2, d3, (uint8_t)g_setPos, g_blinkState);
-        HC595_2_Display3DigitsWithBlink(d1, d2, d3, (uint8_t)g_setPos, g_blinkState);
+        /* 设置模式 - 当前设置的组闪烁，另一组正常显示 */
+        uint16_t editVal = *get_current_value_ptr();
+        uint16_t otherVal = (g_currentGroup == SET_GROUP_1) ? val2 : val1;
+        
+        /* 显示另一组 (正常显示) */
+        d3 = otherVal % 10; d2 = (otherVal / 10) % 10; d1 = (otherVal / 100) % 10;
+        if (g_currentGroup == SET_GROUP_1)
+            HC595_2_Display3Digits(d1, d2, d3);
+        else
+            HC595_1_Display3Digits(d1, d2, d3);
+        
+        /* 显示当前设置组 (带闪烁) */
+        d3 = editVal % 10; d2 = (editVal / 10) % 10; d1 = (editVal / 100) % 10;
+        DBG_seg_d1 = d1; DBG_seg_d2 = d2; DBG_seg_d3 = d3;
+        if (g_currentGroup == SET_GROUP_1)
+            HC595_1_Display3DigitsWithBlink(d1, d2, d3, (uint8_t)g_setPos, g_blinkState);
+        else
+            HC595_2_Display3DigitsWithBlink(d1, d2, d3, (uint8_t)g_setPos, g_blinkState);
     }
 }
 
@@ -251,18 +304,34 @@ void TEMP_SETTING_Display(void)
 void TEMP_SETTING_Handler(void)
 {
     handle_set_key();
+    check_long_press();  /* 检查长按 */
     handle_add_key();
     handle_sub_key();
     handle_shift_key();
-    handle_reset_key();  /* 处理复位键 */
+    handle_reset_key();
     handle_blink();
 }
 
 /**
- * @brief  获取设置值
- * @retval 设置的阈值 (0-999)
+ * @brief  获取第一组设置值
  */
-uint16_t TEMP_SETTING_GetValue(void)
+uint16_t TEMP_SETTING_GetValue1(void)
 {
-    return g_setValue;
+    return g_setValue1;
+}
+
+/**
+ * @brief  获取第二组设置值
+ */
+uint16_t TEMP_SETTING_GetValue2(void)
+{
+    return g_setValue2;
+}
+
+/**
+ * @brief  获取当前设置的组
+ */
+SetGroup_t TEMP_SETTING_GetCurrentGroup(void)
+{
+    return g_currentGroup;
 }

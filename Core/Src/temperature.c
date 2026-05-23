@@ -13,7 +13,8 @@
 #define TEMP_SENSOR_FAULT   -5000   /* 传感器故障特殊值 */
 
 /* 外部阈值变量 (在 main.c 中设置) */
-extern uint16_t g_temp_threshold;
+extern uint16_t g_temp_threshold1;  /* 第一组阈值 (CH1-CH4) */
+extern uint16_t g_temp_threshold2;  /* 第二组阈值 (CH5-CH8) */
 
 float temperature[TEMP_CHANNEL_NUM] = {0};
 uint8_t temp_valid[TEMP_CHANNEL_NUM] = {0};  /* 1=有效，0=传感器故障 */
@@ -57,10 +58,10 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
     {
         uint16_t offset = 3 + i * 2;
         int16_t temp_raw;
-        
+
         /* 大端序组合成 16 位有符号整数 */
         temp_raw = (int16_t)((buf[offset] << 8) | buf[offset + 1]);
-        
+
         /* 检查是否为故障值 */
         if (temp_raw == TEMP_SENSOR_FAULT)
         {
@@ -72,11 +73,23 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
             /* 转换为实际温度值 (放大 10 倍) */
             temperature[i] = (float)temp_raw / 10.0f;
             temp_valid[i] = 1;  /* 标记为有效 */
-            
-            /* 检查是否超过阈值 */
-            if (temperature[i] >= (float)g_temp_threshold)
+
+            /* 检查是否超过阈值 - 两组独立阈值 */
+            if (i < 4)
             {
-                alarm_flag = 1;
+                /* CH1-CH4 使用第一组阈值 */
+                if (temperature[i] >= (float)g_temp_threshold1)
+                {
+                    alarm_flag = 1;
+                }
+            }
+            else
+            {
+                /* CH5-CH8 使用第二组阈值 */
+                if (temperature[i] >= (float)g_temp_threshold2)
+                {
+                    alarm_flag = 1;
+                }
             }
         }
     }

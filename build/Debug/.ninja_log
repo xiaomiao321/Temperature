@@ -38,3 +38,7 @@
 235	455	8012128724098037	Final.elf	8c41377fb64f89b7
 3	181	8012132693050640	CMakeFiles/Final.dir/Core/Src/hc595.c.obj	16053ea59d013678
 182	375	8012132694872544	Final.elf	8c41377fb64f89b7
+13	253	8012136750572823	CMakeFiles/Final.dir/Core/Src/temperature.c.obj	63f46f2067edfdf0
+9	261	8012136750658047	CMakeFiles/Final.dir/Core/Src/temp_setting.c.obj	a3f6c7e1788db98d
+3	267	8012136750722786	CMakeFiles/Final.dir/Core/Src/main.c.obj	6a580043014e75c6
+267	464	8012136752558390	Final.elf	8c41377fb64f89b7

@@ -65,8 +65,9 @@ void SystemClock_Config(void);
 uint8_t uart2_rx_buf[UART2_BUF_SIZE];
 uint16_t uart2_rx_len = 0;
 
-/* 全局温度阈值变量 */
-uint16_t g_temp_threshold = 30; /* 默认 30℃ */
+/* 全局温度阈值变量 - 两组独立阈值 */
+uint16_t g_temp_threshold1 = 30;  /* 第一组阈值 (CH1-CH4) */
+uint16_t g_temp_threshold2 = 30;  /* 第二组阈值 (CH5-CH8) */
 
 /* 外部温度变量声明 */
 extern float temperature[8];
@@ -157,7 +158,8 @@ int main(void)
     TEMP_SETTING_Display();
 
     /* 更新阈值到全局变量 */
-    g_temp_threshold = TEMP_SETTING_GetValue();
+    g_temp_threshold1 = TEMP_SETTING_GetValue1();
+    g_temp_threshold2 = TEMP_SETTING_GetValue2();
 
     /* 从 UART2 读取一帧数据 */
     uart2_rx_len = 0;

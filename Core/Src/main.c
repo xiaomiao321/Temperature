@@ -140,6 +140,13 @@ int main(void) {
   HC595_Init();
   TEMP_SETTING_Init();
 
+  /* 上电测试继电器：拉高两个继电器引脚约 1 秒 */
+  // HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_SET);
+  // HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_SET);
+  // HAL_Delay(1000);
+  // HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_RESET);
+  // HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_RESET);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */

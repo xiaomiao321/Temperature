@@ -1171,7 +1171,7 @@
 				}
 			],
 			"type" : "UNINITIALIZED",
-			"value" : "../../cmake/gcc-arm-none-eabi.cmake"
+			"value" : "D:/files/25_26_Spring/Temperature/Final/cmake/gcc-arm-none-eabi.cmake"
 		},
 		{
 			"name" : "CMAKE_VERBOSE_MAKEFILE",

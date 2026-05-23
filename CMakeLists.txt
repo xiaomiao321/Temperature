@@ -46,6 +46,10 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
     Lib/MultiButton/multi_button.c
+    Core/Src/hc595.c
+    Core/Src/key.c
+    Core/Src/temp_setting.c
+    Core/Src/temperature.c
 )
 
 # Add include paths

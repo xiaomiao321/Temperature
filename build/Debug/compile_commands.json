@@ -43,30 +43,6 @@
 },
 {
   "directory": "D:/files/25_26_Spring/Temperature/Final/build/Debug",
-  "command": "D:\\STM32CubeCLT\\STM32CubeCLT_1.18.0\\GNU-tools-for-STM32\\bin\\arm-none-eabi-gcc.exe -DDEBUG -DSTM32F103xB -DUSE_HAL_DRIVER -ID:/files/25_26_Spring/Temperature/Final/Lib/MultiButton -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Core/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Device/ST/STM32F1xx/Include -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Include  -mcpu=cortex-m3  -Wall -fdata-sections -ffunction-sections -O0 -g3 -std=gnu11 -o CMakeFiles\\Final.dir\\Core\\Src\\temperature.c.obj -c D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\temperature.c",
-  "file": "D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\temperature.c",
-  "output": "CMakeFiles\\Final.dir\\Core\\Src\\temperature.c.obj"
-},
-{
-  "directory": "D:/files/25_26_Spring/Temperature/Final/build/Debug",
-  "command": "D:\\STM32CubeCLT\\STM32CubeCLT_1.18.0\\GNU-tools-for-STM32\\bin\\arm-none-eabi-gcc.exe -DDEBUG -DSTM32F103xB -DUSE_HAL_DRIVER -ID:/files/25_26_Spring/Temperature/Final/Lib/MultiButton -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Core/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Device/ST/STM32F1xx/Include -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Include  -mcpu=cortex-m3  -Wall -fdata-sections -ffunction-sections -O0 -g3 -std=gnu11 -o CMakeFiles\\Final.dir\\Core\\Src\\key.c.obj -c D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\key.c",
-  "file": "D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\key.c",
-  "output": "CMakeFiles\\Final.dir\\Core\\Src\\key.c.obj"
-},
-{
-  "directory": "D:/files/25_26_Spring/Temperature/Final/build/Debug",
-  "command": "D:\\STM32CubeCLT\\STM32CubeCLT_1.18.0\\GNU-tools-for-STM32\\bin\\arm-none-eabi-gcc.exe -DDEBUG -DSTM32F103xB -DUSE_HAL_DRIVER -ID:/files/25_26_Spring/Temperature/Final/Lib/MultiButton -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Core/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Device/ST/STM32F1xx/Include -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Include  -mcpu=cortex-m3  -Wall -fdata-sections -ffunction-sections -O0 -g3 -std=gnu11 -o CMakeFiles\\Final.dir\\Core\\Src\\hc595.c.obj -c D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\hc595.c",
-  "file": "D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\hc595.c",
-  "output": "CMakeFiles\\Final.dir\\Core\\Src\\hc595.c.obj"
-},
-{
-  "directory": "D:/files/25_26_Spring/Temperature/Final/build/Debug",
-  "command": "D:\\STM32CubeCLT\\STM32CubeCLT_1.18.0\\GNU-tools-for-STM32\\bin\\arm-none-eabi-gcc.exe -DDEBUG -DSTM32F103xB -DUSE_HAL_DRIVER -ID:/files/25_26_Spring/Temperature/Final/Lib/MultiButton -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Core/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Device/ST/STM32F1xx/Include -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Include  -mcpu=cortex-m3  -Wall -fdata-sections -ffunction-sections -O0 -g3 -std=gnu11 -o CMakeFiles\\Final.dir\\Core\\Src\\temp_setting.c.obj -c D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\temp_setting.c",
-  "file": "D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\temp_setting.c",
-  "output": "CMakeFiles\\Final.dir\\Core\\Src\\temp_setting.c.obj"
-},
-{
-  "directory": "D:/files/25_26_Spring/Temperature/Final/build/Debug",
   "command": "D:\\STM32CubeCLT\\STM32CubeCLT_1.18.0\\GNU-tools-for-STM32\\bin\\arm-none-eabi-gcc.exe -DDEBUG -DSTM32F103xB -DUSE_HAL_DRIVER -ID:/files/25_26_Spring/Temperature/Final/Lib/MultiButton -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Core/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Device/ST/STM32F1xx/Include -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Include  -mcpu=cortex-m3  -x assembler-with-cpp -MMD -MP -g -o CMakeFiles\\Final.dir\\startup_stm32f103xb.s.obj -c D:\\files\\25_26_Spring\\Temperature\\Final\\startup_stm32f103xb.s",
   "file": "D:\\files\\25_26_Spring\\Temperature\\Final\\startup_stm32f103xb.s",
   "output": "CMakeFiles\\Final.dir\\startup_stm32f103xb.s.obj"
@@ -76,6 +52,30 @@
   "command": "D:\\STM32CubeCLT\\STM32CubeCLT_1.18.0\\GNU-tools-for-STM32\\bin\\arm-none-eabi-gcc.exe -DDEBUG -DSTM32F103xB -DUSE_HAL_DRIVER -ID:/files/25_26_Spring/Temperature/Final/Lib/MultiButton -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Core/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Device/ST/STM32F1xx/Include -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Include  -mcpu=cortex-m3  -Wall -fdata-sections -ffunction-sections -O0 -g3 -std=gnu11 -o CMakeFiles\\Final.dir\\Lib\\MultiButton\\multi_button.c.obj -c D:\\files\\25_26_Spring\\Temperature\\Final\\Lib\\MultiButton\\multi_button.c",
   "file": "D:\\files\\25_26_Spring\\Temperature\\Final\\Lib\\MultiButton\\multi_button.c",
   "output": "CMakeFiles\\Final.dir\\Lib\\MultiButton\\multi_button.c.obj"
+},
+{
+  "directory": "D:/files/25_26_Spring/Temperature/Final/build/Debug",
+  "command": "D:\\STM32CubeCLT\\STM32CubeCLT_1.18.0\\GNU-tools-for-STM32\\bin\\arm-none-eabi-gcc.exe -DDEBUG -DSTM32F103xB -DUSE_HAL_DRIVER -ID:/files/25_26_Spring/Temperature/Final/Lib/MultiButton -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Core/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Device/ST/STM32F1xx/Include -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Include  -mcpu=cortex-m3  -Wall -fdata-sections -ffunction-sections -O0 -g3 -std=gnu11 -o CMakeFiles\\Final.dir\\Core\\Src\\hc595.c.obj -c D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\hc595.c",
+  "file": "D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\hc595.c",
+  "output": "CMakeFiles\\Final.dir\\Core\\Src\\hc595.c.obj"
+},
+{
+  "directory": "D:/files/25_26_Spring/Temperature/Final/build/Debug",
+  "command": "D:\\STM32CubeCLT\\STM32CubeCLT_1.18.0\\GNU-tools-for-STM32\\bin\\arm-none-eabi-gcc.exe -DDEBUG -DSTM32F103xB -DUSE_HAL_DRIVER -ID:/files/25_26_Spring/Temperature/Final/Lib/MultiButton -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Core/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Device/ST/STM32F1xx/Include -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Include  -mcpu=cortex-m3  -Wall -fdata-sections -ffunction-sections -O0 -g3 -std=gnu11 -o CMakeFiles\\Final.dir\\Core\\Src\\key.c.obj -c D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\key.c",
+  "file": "D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\key.c",
+  "output": "CMakeFiles\\Final.dir\\Core\\Src\\key.c.obj"
+},
+{
+  "directory": "D:/files/25_26_Spring/Temperature/Final/build/Debug",
+  "command": "D:\\STM32CubeCLT\\STM32CubeCLT_1.18.0\\GNU-tools-for-STM32\\bin\\arm-none-eabi-gcc.exe -DDEBUG -DSTM32F103xB -DUSE_HAL_DRIVER -ID:/files/25_26_Spring/Temperature/Final/Lib/MultiButton -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Core/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Device/ST/STM32F1xx/Include -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Include  -mcpu=cortex-m3  -Wall -fdata-sections -ffunction-sections -O0 -g3 -std=gnu11 -o CMakeFiles\\Final.dir\\Core\\Src\\temp_setting.c.obj -c D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\temp_setting.c",
+  "file": "D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\temp_setting.c",
+  "output": "CMakeFiles\\Final.dir\\Core\\Src\\temp_setting.c.obj"
+},
+{
+  "directory": "D:/files/25_26_Spring/Temperature/Final/build/Debug",
+  "command": "D:\\STM32CubeCLT\\STM32CubeCLT_1.18.0\\GNU-tools-for-STM32\\bin\\arm-none-eabi-gcc.exe -DDEBUG -DSTM32F103xB -DUSE_HAL_DRIVER -ID:/files/25_26_Spring/Temperature/Final/Lib/MultiButton -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Core/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Device/ST/STM32F1xx/Include -ID:/files/25_26_Spring/Temperature/Final/cmake/stm32cubemx/../../Drivers/CMSIS/Include  -mcpu=cortex-m3  -Wall -fdata-sections -ffunction-sections -O0 -g3 -std=gnu11 -o CMakeFiles\\Final.dir\\Core\\Src\\temperature.c.obj -c D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\temperature.c",
+  "file": "D:\\files\\25_26_Spring\\Temperature\\Final\\Core\\Src\\temperature.c",
+  "output": "CMakeFiles\\Final.dir\\Core\\Src\\temperature.c.obj"
 },
 {
   "directory": "D:/files/25_26_Spring/Temperature/Final/build/Debug",

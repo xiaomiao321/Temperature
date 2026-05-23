@@ -59,12 +59,12 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define LED_Pin GPIO_PIN_13
 #define LED_GPIO_Port GPIOC
-#define SDI_Pin GPIO_PIN_5
-#define SDI_GPIO_Port GPIOA
-#define SCLK_Pin GPIO_PIN_6
-#define SCLK_GPIO_Port GPIOA
-#define LOAD_Pin GPIO_PIN_7
-#define LOAD_GPIO_Port GPIOA
+#define SDI1_Pin GPIO_PIN_5
+#define SDI1_GPIO_Port GPIOA
+#define SCLK1_Pin GPIO_PIN_6
+#define SCLK1_GPIO_Port GPIOA
+#define LOAD1_Pin GPIO_PIN_7
+#define LOAD1_GPIO_Port GPIOA
 #define Btn3_Pin GPIO_PIN_0
 #define Btn3_GPIO_Port GPIOB
 #define Btn4_Pin GPIO_PIN_1
@@ -79,6 +79,12 @@ void Error_Handler(void);
 #define Relay_24_GPIO_Port GPIOB
 #define Relay_220_Pin GPIO_PIN_6
 #define Relay_220_GPIO_Port GPIOB
+#define SDI2_Pin GPIO_PIN_7
+#define SDI2_GPIO_Port GPIOB
+#define SCLK2_Pin GPIO_PIN_8
+#define SCLK2_GPIO_Port GPIOB
+#define LOAD2_Pin GPIO_PIN_9
+#define LOAD2_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

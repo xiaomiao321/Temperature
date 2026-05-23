@@ -52,7 +52,8 @@
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+/* MultiButton 5ms 定时器计数器 */
+static uint8_t button_tick_divider = 0;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -60,11 +61,6 @@ extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
-
-/* USER CODE BEGIN 0 */
-/* MultiButton 5ms 定时器计数器 */
-static uint8_t button_tick_divider = 0;
-/* USER CODE END 0 */
 
 /******************************************************************************/
 /*           Cortex-M3 Processor Interruption and Exception Handlers          */

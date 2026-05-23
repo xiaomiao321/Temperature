@@ -40,13 +40,16 @@ void TEMP_SETTING_Init(void)
     HAL_Delay(500);
     HC595_TestAllOff();   /* 全灭 */
     HAL_Delay(200);
-    HC595_DisplayNumber(123);  /* 显示 123 */
+    HC595_1_DisplayNumber(123);  /* 显示 123 */
+    HC595_2_DisplayNumber(123);
     HAL_Delay(500);
-    HC595_DisplayNumber(456);  /* 显示 456 */
+    HC595_1_DisplayNumber(456);  /* 显示 456 */
+    HC595_2_DisplayNumber(456);
     HAL_Delay(500);
-    HC595_DisplayNumber(0);    /* 显示 000 */
+    HC595_1_DisplayNumber(0);    /* 显示 000 */
+    HC595_2_DisplayNumber(0);
     HAL_Delay(300);
-    
+
     g_setMode = SET_MODE_NORMAL;
     g_setPos = SET_POS_UNIT;
     g_blinkState = 1;
@@ -231,12 +234,14 @@ void TEMP_SETTING_Display(void)
     if (g_setMode == SET_MODE_NORMAL)
     {
         /* 正常模式 - 直接显示 */
-        HC595_Display3Digits(d1, d2, d3);
+        HC595_1_Display3Digits(d1, d2, d3);  /* 第一组显示阈值 */
+        HC595_2_Display3Digits(d1, d2, d3);  /* 第二组显示阈值 */
     }
     else
     {
         /* 设置模式 - 带闪烁显示 */
-        HC595_Display3DigitsWithBlink(d1, d2, d3, (uint8_t)g_setPos, g_blinkState);
+        HC595_1_Display3DigitsWithBlink(d1, d2, d3, (uint8_t)g_setPos, g_blinkState);
+        HC595_2_Display3DigitsWithBlink(d1, d2, d3, (uint8_t)g_setPos, g_blinkState);
     }
 }
 

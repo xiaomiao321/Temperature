@@ -1,8 +1,7 @@
 /*
  * @file     hc595.c
- * @brief    74HC595 驱动数码管 - 基于 HAL 库
- * @version  v1.0
- * @date     2026-05-17
+ * @brief    74HC595 驱动数码管 - 支持两组 3 位数码管
+ * @version  v2.0
  */
 #include "hc595.h"
 
@@ -40,202 +39,254 @@ static void HC595_Delay(void)
     __NOP();
 }
 
+/* ========== 第一组数码管 (PA5-PA7) ========== */
+
 /**
- * @brief  初始化 74HC595 引脚
+ * @brief  初始化第一组 74HC595 引脚
  */
-void HC595_Init(void)
+void HC595_1_Init(void)
 {
-    /* CubeMX 已初始化 GPIO，确保输出低电平 */
-    HAL_GPIO_WritePin(HC595_PORT, HC595_DS_PIN | HC595_SHCP_PIN | HC595_STCP_PIN, GPIO_PIN_RESET);
+    /* 先拉低所有引脚 */
+    HAL_GPIO_WritePin(HC595_1_PORT, HC595_1_DS_PIN | HC595_1_SHCP_PIN | HC595_1_STCP_PIN, GPIO_PIN_RESET);
+    
+    /* 发送 3 字节 0，清零移位寄存器 */
+    HC595_1_SendByte(0x00);
+    HC595_1_SendByte(0x00);
+    HC595_1_SendByte(0x00);
+    HC595_1_Latch();
 }
 
 /**
- * @brief  发送 1 字节数据到 74HC595 (MSB First)
- * @param  data: 要发送的数据
+ * @brief  发送 1 字节数据到第一组 74HC595 (MSB First)
  */
-void HC595_SendByte(uint8_t data)
+void HC595_1_SendByte(uint8_t data)
 {
-    uint8_t i;
-
-    for(i = 0; i < 8; i++)
-    {
-        /* 1. 拉低移位时钟 */
-        HAL_GPIO_WritePin(HC595_PORT, HC595_SHCP_PIN, GPIO_PIN_RESET);
-
-        /* 2. 设置数据位 (MSB First) */
-        if(data & 0x80)
-            HAL_GPIO_WritePin(HC595_PORT, HC595_DS_PIN, GPIO_PIN_SET);
+    for (uint8_t i = 0; i < 8; i++) {
+        HAL_GPIO_WritePin(HC595_1_PORT, HC595_1_SHCP_PIN, GPIO_PIN_RESET);
+        if (data & 0x80)
+            HAL_GPIO_WritePin(HC595_1_PORT, HC595_1_DS_PIN, GPIO_PIN_SET);
         else
-            HAL_GPIO_WritePin(HC595_PORT, HC595_DS_PIN, GPIO_PIN_RESET);
-
-        /* 3. 数据移位 */
+            HAL_GPIO_WritePin(HC595_1_PORT, HC595_1_DS_PIN, GPIO_PIN_RESET);
         data <<= 1;
-
-        /* 4. 短延时 */
         HC595_Delay();
-
-        /* 5. 拉高移位时钟 (上升沿移位) */
-        HAL_GPIO_WritePin(HC595_PORT, HC595_SHCP_PIN, GPIO_PIN_SET);
-
-        /* 6. 短延时 */
+        HAL_GPIO_WritePin(HC595_1_PORT, HC595_1_SHCP_PIN, GPIO_PIN_SET);
         HC595_Delay();
     }
-
-    /* 确保最终状态 */
-    HAL_GPIO_WritePin(HC595_PORT, HC595_SHCP_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(HC595_1_PORT, HC595_1_SHCP_PIN, GPIO_PIN_RESET);
 }
 
 /**
- * @brief  锁存数据到输出
+ * @brief  第一组锁存数据到输出
  */
-void HC595_Latch(void)
+void HC595_1_Latch(void)
 {
-    HAL_GPIO_WritePin(HC595_PORT, HC595_STCP_PIN, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(HC595_1_PORT, HC595_1_STCP_PIN, GPIO_PIN_SET);
     HC595_Delay();
-    HAL_GPIO_WritePin(HC595_PORT, HC595_STCP_PIN, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(HC595_1_PORT, HC595_1_STCP_PIN, GPIO_PIN_RESET);
 }
 
 /**
- * @brief  显示单个数字 (0-15)
- * @param  num: 要显示的数字 (0-15)
+ * @brief  显示 3 位数码管 - 第一组
  */
-void HC595_Display(uint8_t num)
+void HC595_1_Display3Digits(uint8_t d1, uint8_t d2, uint8_t d3)
 {
-    if(num > 15) num = 15;
-    HC595_SendByte(SEG_CODE[num]);
-    HC595_Latch();
+    if (d1 > 16) d1 = 16;
+    if (d2 > 16) d2 = 16;
+    if (d3 > 16) d3 = 16;
+    
+    HC595_1_SendByte(SEG_CODE[d3]);
+    HC595_1_SendByte(SEG_CODE[d2]);
+    HC595_1_SendByte(SEG_CODE[d1]);
+    HC595_1_Latch();
 }
 
 /**
- * @brief  显示原始段码
- * @param  seg_code: 段码值
+ * @brief  显示数字 (0-999) - 第一组
  */
-void HC595_DisplayRaw(uint8_t seg_code)
+void HC595_1_DisplayNumber(uint16_t num)
 {
-    HC595_SendByte(seg_code);
-    HC595_Latch();
+    if (num > 999) num = 999;
+    uint8_t d3 = num % 10;
+    uint8_t d2 = (num / 10) % 10;
+    uint8_t d1 = (num / 100) % 10;
+    HC595_1_Display3Digits(d1, d2, d3);
 }
 
 /**
- * @brief  发送多字节 (用于级联)
- * @param  data: 数据缓冲区
- * @param  count: 字节数
+ * @brief  带闪烁效果的显示 - 第一组
  */
-void HC595_SendMultiBytes(uint8_t *data, uint8_t count)
-{
-    uint8_t i;
-    for(i = 0; i < count; i++)
-    {
-        HC595_SendByte(data[i]);
-    }
-    HC595_Latch();
-}
-
-/**
- * @brief  显示 3 位数码管 (3 片 74HC595 级联)
- * @param  d1: 第 1 位数字 (最左边，百位)
- * @param  d2: 第 2 位数字 (中间，十位)
- * @param  d3: 第 3 位数字 (最右边，个位)
- * @note   级联时，后发送的数据在最远端
- *         顺序：个位 (最近) → 十位 → 百位 (最远)
- */
-void HC595_Display3Digits(uint8_t d1, uint8_t d2, uint8_t d3)
-{
-    /* 限制数字范围 0-15 */
-    if(d1 > 15) d1 = 15;
-    if(d2 > 15) d2 = 15;
-    if(d3 > 15) d3 = 15;
-
-    /* 发送段码数据 - 先发送最近端 */
-    HC595_SendByte(SEG_CODE[d3]);  /* 个位 - 第 3 片 (最近端) */
-    HC595_SendByte(SEG_CODE[d2]);  /* 十位 - 第 2 片 */
-    HC595_SendByte(SEG_CODE[d1]);  /* 百位 - 第 1 片 (最远端) */
-    HC595_Latch();
-}
-
-/**
- * @brief  显示 3 位数字 (0-999)
- * @param  num: 要显示的数字 (0-999)
- */
-void HC595_DisplayNumber(uint16_t num)
-{
-    uint8_t d1, d2, d3;
-
-    if(num > 999) num = 999;
-
-    d3 = num % 10;        /* 个位 */
-    d2 = (num / 10) % 10; /* 十位 */
-    d1 = (num / 100) % 10;/* 百位 */
-
-    HC595_Display3Digits(d1, d2, d3);
-}
-
-/**
- * @brief  带闪烁效果的 3 位数码管显示 (用于设置模式)
- * @param  d1: 第 1 位数字 (百位)
- * @param  d2: 第 2 位数字 (十位)
- * @param  d3: 第 3 位数字 (个位)
- * @param  blinkPos: 闪烁位置 (0-百位，1-十位，2-个位，3-不闪烁)
- * @param  blinkState: 闪烁状态 (1-显示，0-熄灭)
- * @note   当 blinkState=0 且 blinkPos 在有效范围内时，对应位熄灭实现闪烁效果
- */
-void HC595_Display3DigitsWithBlink(uint8_t d1, uint8_t d2, uint8_t d3, uint8_t blinkPos, uint8_t blinkState)
+void HC595_1_Display3DigitsWithBlink(uint8_t d1, uint8_t d2, uint8_t d3, uint8_t blinkPos, uint8_t blinkState)
 {
     uint8_t show_d1 = d1, show_d2 = d2, show_d3 = d3;
-
-    /* 限制数字范围 0-16(16 是灭码) */
-    if(d1 > 16) d1 = 16;
-    if(d2 > 16) d2 = 16;
-    if(d3 > 16) d3 = 16;
-
-    /* 根据闪烁位置和状态，决定是否熄灭对应位 */
-    if(blinkState == 0)
-    {
-        switch(blinkPos)
-        {
-            case 0: show_d1 = 16; break;  /* 百位闪烁 - 熄灭 (16 是灭码) */
-            case 1: show_d2 = 16; break;  /* 十位闪烁 - 熄灭 */
-            case 2: show_d3 = 16; break;  /* 个位闪烁 - 熄灭 */
-            default: break;               /* 不闪烁 */
+    
+    if (d1 > 16) d1 = 16;
+    if (d2 > 16) d2 = 16;
+    if (d3 > 16) d3 = 16;
+    
+    if (blinkState == 0) {
+        switch (blinkPos) {
+            case 0: show_d1 = 16; break;
+            case 1: show_d2 = 16; break;
+            case 2: show_d3 = 16; break;
         }
     }
-
-    /* 发送段码数据 - 先发送最近端 */
-    HC595_SendByte(SEG_CODE[show_d3]);  /* 个位 */
-    HC595_SendByte(SEG_CODE[show_d2]);  /* 十位 */
-    HC595_SendByte(SEG_CODE[show_d1]);  /* 百位 */
-    HC595_Latch();
+    
+    HC595_1_SendByte(SEG_CODE[show_d3]);
+    HC595_1_SendByte(SEG_CODE[show_d2]);
+    HC595_1_SendByte(SEG_CODE[show_d1]);
+    HC595_1_Latch();
 }
 
+/* ========== 第二组数码管 (PB7-PB9) ========== */
+
 /**
- * @brief  测试函数：显示全 8 字 (所有段点亮)
+ * @brief  初始化第二组 74HC595 引脚
  */
-void HC595_TestAllOn(void)
+void HC595_2_Init(void)
 {
-    HC595_SendByte(0x00);  /* 0x00 = 所有段点亮 (共阳) */
-    HC595_SendByte(0x00);
-    HC595_SendByte(0x00);
-    HC595_Latch();
+    /* 先拉低所有引脚 */
+    HAL_GPIO_WritePin(HC595_2_PORT, HC595_2_DS_PIN | HC595_2_SHCP_PIN | HC595_2_STCP_PIN, GPIO_PIN_RESET);
+    
+    /* 发送 3 字节 0，清零移位寄存器 */
+    HC595_2_SendByte(0x00);
+    HC595_2_SendByte(0x00);
+    HC595_2_SendByte(0x00);
+    HC595_2_Latch();
 }
 
 /**
- * @brief  测试函数：显示全灭
+ * @brief  发送 1 字节数据到第二组 74HC595 (MSB First)
  */
-void HC595_TestAllOff(void)
+void HC595_2_SendByte(uint8_t data)
 {
-    HC595_SendByte(0xFF);  /* 0xFF = 所有段熄灭 (共阳) */
-    HC595_SendByte(0xFF);
-    HC595_SendByte(0xFF);
-    HC595_Latch();
+    for (uint8_t i = 0; i < 8; i++) {
+        HAL_GPIO_WritePin(HC595_2_PORT, HC595_2_SHCP_PIN, GPIO_PIN_RESET);
+        if (data & 0x80)
+            HAL_GPIO_WritePin(HC595_2_PORT, HC595_2_DS_PIN, GPIO_PIN_SET);
+        else
+            HAL_GPIO_WritePin(HC595_2_PORT, HC595_2_DS_PIN, GPIO_PIN_RESET);
+        data <<= 1;
+        HC595_Delay();
+        HAL_GPIO_WritePin(HC595_2_PORT, HC595_2_SHCP_PIN, GPIO_PIN_SET);
+        HC595_Delay();
+    }
+    HAL_GPIO_WritePin(HC595_2_PORT, HC595_2_SHCP_PIN, GPIO_PIN_RESET);
 }
 
 /**
- * @brief  测试函数：显示 888
+ * @brief  第二组锁存数据到输出
+ */
+void HC595_2_Latch(void)
+{
+    HAL_GPIO_WritePin(HC595_2_PORT, HC595_2_STCP_PIN, GPIO_PIN_SET);
+    HC595_Delay();
+    HAL_GPIO_WritePin(HC595_2_PORT, HC595_2_STCP_PIN, GPIO_PIN_RESET);
+}
+
+/**
+ * @brief  显示 3 位数码管 - 第二组
+ */
+void HC595_2_Display3Digits(uint8_t d1, uint8_t d2, uint8_t d3)
+{
+    if (d1 > 16) d1 = 16;
+    if (d2 > 16) d2 = 16;
+    if (d3 > 16) d3 = 16;
+    
+    HC595_2_SendByte(SEG_CODE[d3]);
+    HC595_2_SendByte(SEG_CODE[d2]);
+    HC595_2_SendByte(SEG_CODE[d1]);
+    HC595_2_Latch();
+}
+
+/**
+ * @brief  显示数字 (0-999) - 第二组
+ */
+void HC595_2_DisplayNumber(uint16_t num)
+{
+    if (num > 999) num = 999;
+    uint8_t d3 = num % 10;
+    uint8_t d2 = (num / 10) % 10;
+    uint8_t d1 = (num / 100) % 10;
+    HC595_2_Display3Digits(d1, d2, d3);
+}
+
+/**
+ * @brief  带闪烁效果的显示 - 第二组
+ */
+void HC595_2_Display3DigitsWithBlink(uint8_t d1, uint8_t d2, uint8_t d3, uint8_t blinkPos, uint8_t blinkState)
+{
+    uint8_t show_d1 = d1, show_d2 = d2, show_d3 = d3;
+    
+    if (d1 > 16) d1 = 16;
+    if (d2 > 16) d2 = 16;
+    if (d3 > 16) d3 = 16;
+    
+    if (blinkState == 0) {
+        switch (blinkPos) {
+            case 0: show_d1 = 16; break;
+            case 1: show_d2 = 16; break;
+            case 2: show_d3 = 16; break;
+        }
+    }
+    
+    HC595_2_SendByte(SEG_CODE[show_d3]);
+    HC595_2_SendByte(SEG_CODE[show_d2]);
+    HC595_2_SendByte(SEG_CODE[show_d1]);
+    HC595_2_Latch();
+}
+
+/* ========== 公共测试函数 ========== */
+
+/**
+ * @brief  测试函数：显示全 8 字 (两组同时显示)
  */
 void HC595_Test888(void)
 {
-    HC595_SendByte(0x80);  /* 8 */
-    HC595_SendByte(0x80);
-    HC595_SendByte(0x80);
-    HC595_Latch();
+    /* 第一组 */
+    HC595_1_SendByte(0x80);
+    HC595_1_SendByte(0x80);
+    HC595_1_SendByte(0x80);
+    HC595_1_Latch();
+    
+    /* 第二组 */
+    HC595_2_SendByte(0x80);
+    HC595_2_SendByte(0x80);
+    HC595_2_SendByte(0x80);
+    HC595_2_Latch();
+}
+
+/**
+ * @brief  测试函数：全灭 (两组同时)
+ */
+void HC595_TestAllOff(void)
+{
+    /* 第一组 */
+    HC595_1_SendByte(0xFF);
+    HC595_1_SendByte(0xFF);
+    HC595_1_SendByte(0xFF);
+    HC595_1_Latch();
+    
+    /* 第二组 */
+    HC595_2_SendByte(0xFF);
+    HC595_2_SendByte(0xFF);
+    HC595_2_SendByte(0xFF);
+    HC595_2_Latch();
+}
+
+/**
+ * @brief  测试函数：全亮 (两组同时)
+ */
+void HC595_TestAllOn(void)
+{
+    /* 第一组 */
+    HC595_1_SendByte(0x00);
+    HC595_1_SendByte(0x00);
+    HC595_1_SendByte(0x00);
+    HC595_1_Latch();
+    
+    /* 第二组 */
+    HC595_2_SendByte(0x00);
+    HC595_2_SendByte(0x00);
+    HC595_2_SendByte(0x00);
+    HC595_2_Latch();
 }

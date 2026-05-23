@@ -37,19 +37,19 @@
 			{
 				"command" : 1,
 				"file" : 1,
-				"line" : 85,
+				"line" : 81,
 				"parent" : 2
 			},
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 52,
+				"line" : 56,
 				"parent" : 0
 			},
 			{
 				"command" : 3,
 				"file" : 1,
-				"line" : 79,
+				"line" : 75,
 				"parent" : 2
 			},
 			{
@@ -129,10 +129,10 @@
 				4,
 				5,
 				6,
-				7,
 				8,
 				9,
 				10,
+				11,
 				12
 			]
 		},
@@ -188,7 +188,7 @@
 			"language" : "ASM",
 			"sourceIndexes" : 
 			[
-				11
+				7
 			]
 		}
 	],
@@ -240,10 +240,10 @@
 				4,
 				5,
 				6,
-				7,
 				8,
 				9,
 				10,
+				11,
 				12
 			]
 		},
@@ -251,7 +251,7 @@
 			"name" : "",
 			"sourceIndexes" : 
 			[
-				11
+				7
 			]
 		},
 		{
@@ -320,30 +320,6 @@
 		},
 		{
 			"backtrace" : 5,
-			"compileGroupIndex" : 0,
-			"path" : "Core/Src/temperature.c",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 5,
-			"compileGroupIndex" : 0,
-			"path" : "Core/Src/key.c",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 5,
-			"compileGroupIndex" : 0,
-			"path" : "Core/Src/hc595.c",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 5,
-			"compileGroupIndex" : 0,
-			"path" : "Core/Src/temp_setting.c",
-			"sourceGroupIndex" : 0
-		},
-		{
-			"backtrace" : 5,
 			"compileGroupIndex" : 1,
 			"path" : "startup_stm32f103xb.s",
 			"sourceGroupIndex" : 1
@@ -352,6 +328,30 @@
 			"backtrace" : 6,
 			"compileGroupIndex" : 0,
 			"path" : "Lib/MultiButton/multi_button.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 6,
+			"compileGroupIndex" : 0,
+			"path" : "Core/Src/hc595.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 6,
+			"compileGroupIndex" : 0,
+			"path" : "Core/Src/key.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 6,
+			"compileGroupIndex" : 0,
+			"path" : "Core/Src/temp_setting.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 6,
+			"compileGroupIndex" : 0,
+			"path" : "Core/Src/temperature.c",
 			"sourceGroupIndex" : 0
 		},
 		{

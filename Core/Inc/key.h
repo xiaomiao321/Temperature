@@ -1,7 +1,7 @@
 /*
  * @file     key.h
- * @brief    按键驱动模块
- * @version  v1.0
+ * @brief    按键驱动模块 (基于 MultiButton)
+ * @version  v2.0
  */
 
 #ifndef __KEY_H
@@ -9,29 +9,36 @@
 
 #include "main.h"
 #include <stdint.h>
-
-/* 按键消抖延时 (ms) */
-#define KEY_DEBOUNCE_DELAY  20
-
-/* 按键状态 */
-typedef enum {
-    KEY_STATE_RELEASED = 1,  /* 按键释放 */
-    KEY_STATE_PRESSED = 0    /* 按键按下 (低电平有效) */
-} KeyState_t;
+#include "multi_button.h"
 
 /* 按键 ID 定义 */
 typedef enum {
-    KEY_ID_SET = 0,    /* SET 确认键 - Btn1 */
-    KEY_ID_ADD,        /* 加键 - Btn2 */
-    KEY_ID_SUB,        /* 减键 - Btn3 */
-    KEY_ID_SHIFT,      /* 左移切换键 - Btn4 */
-    KEY_ID_RESET,      /* 复位键 - Reset_Btn */
-    KEY_ID_COUNT       /* 按键总数 */
+    KEY_ID_SET = 1,      /* SET 确认键 - Btn1 (PB3) */
+    KEY_ID_ADD = 2,      /* 加键 - Btn2 (PB4) */
+    KEY_ID_SUB = 3,      /* 减键 - Btn3 (PB0) */
+    KEY_ID_SHIFT = 4,    /* 左移切换键 - Btn4 (PB1) */
+    KEY_ID_RESET = 5,    /* 复位键 - Reset_Btn (PA15) */
 } KeyId_t;
+
+/* 按键句柄 */
+extern Button btn_set;
+extern Button btn_add;
+extern Button btn_sub;
+extern Button btn_shift;
+extern Button btn_reset;
+
+/* 按键事件标志 (供外部查询) */
+extern volatile uint8_t key_set_pressed;
+extern volatile uint8_t key_add_pressed;
+extern volatile uint8_t key_sub_pressed;
+extern volatile uint8_t key_shift_pressed;
+extern volatile uint8_t key_reset_pressed;
 
 /* 函数声明 */
 void KEY_Init(void);
-KeyState_t KEY_Read(KeyId_t key_id);
-uint8_t KEY_Scan(KeyId_t key_id);  /* 扫描按键，返回 1 表示检测到按下 */
+void KEY_Handler(void);  // 在主循环中调用，处理按键事件
+
+/* GPIO 读取函数 - MultiButton 需要 */
+uint8_t KEY_ReadPin(uint8_t button_id);
 
 #endif /* __KEY_H */

@@ -20,6 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f1xx_it.h"
+#include "multi_button.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 /* USER CODE END Includes */
@@ -59,6 +60,11 @@ extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
+
+/* USER CODE BEGIN 0 */
+/* MultiButton 5ms 定时器计数器 */
+static uint8_t button_tick_divider = 0;
+/* USER CODE END 0 */
 
 /******************************************************************************/
 /*           Cortex-M3 Processor Interruption and Exception Handlers          */
@@ -187,7 +193,12 @@ void SysTick_Handler(void)
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
-
+  /* MultiButton 5ms 定时器 - 每 5ms 调用一次 button_ticks() */
+  if (++button_tick_divider >= 5)
+  {
+    button_tick_divider = 0;
+    button_ticks();
+  }
   /* USER CODE END SysTick_IRQn 1 */
 }
 

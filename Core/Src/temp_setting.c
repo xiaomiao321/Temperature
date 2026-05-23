@@ -58,8 +58,10 @@ void TEMP_SETTING_Init(void)
  */
 static void handle_set_key(void)
 {
-    if (KEY_Scan(KEY_ID_SET))
+    if (key_set_pressed)
     {
+        key_set_pressed = 0;  /* 清除标志 */
+        
         if (g_setMode == SET_MODE_NORMAL)
         {
             /* 进入设置模式，从个位开始 */
@@ -73,7 +75,7 @@ static void handle_set_key(void)
             /* 确认设置，返回正常模式 */
             g_setMode = SET_MODE_NORMAL;
             g_blinkState = 1;  /* 停止闪烁，全亮 */
-            
+
             /* 更新温度阈值 */
             // 在 main.c 中处理
         }
@@ -89,9 +91,11 @@ static void handle_add_key(void)
     {
         return;
     }
-    
-    if (KEY_Scan(KEY_ID_ADD))
+
+    if (key_add_pressed)
     {
+        key_add_pressed = 0;  /* 清除标志 */
+        
         uint8_t digit;
         switch (g_setPos)
         {
@@ -123,9 +127,11 @@ static void handle_sub_key(void)
     {
         return;
     }
-    
-    if (KEY_Scan(KEY_ID_SUB))
+
+    if (key_sub_pressed)
     {
+        key_sub_pressed = 0;  /* 清除标志 */
+        
         uint8_t digit;
         switch (g_setPos)
         {
@@ -158,8 +164,10 @@ static void handle_shift_key(void)
         return;
     }
 
-    if (KEY_Scan(KEY_ID_SHIFT))
+    if (key_shift_pressed)
     {
+        key_shift_pressed = 0;  /* 清除标志 */
+        
         /* 切换设置位置：个位 -> 十位 -> 百位 -> 个位 循环 */
         g_setPos = (SetPos_t)((g_setPos + 1) % 3);
 
@@ -174,10 +182,9 @@ static void handle_shift_key(void)
  */
 static void handle_reset_key(void)
 {
-    if (KEY_Scan(KEY_ID_RESET))
+    if (key_reset_pressed)
     {
-        /* 调试：按下复位键时翻转 LED 状态，验证按键被检测到 */
-        HAL_GPIO_TogglePin(LED_GPIO_Port, LED_Pin);
+        key_reset_pressed = 0;  /* 清除标志 */
         
         /* 复位警报 */
         TEMP_Alarm_Reset();

@@ -1,130 +1,95 @@
 /*
  * @file     key.c
- * @brief    按键驱动模块
- * @version  v1.0
+ * @brief    按键驱动模块 (基于 MultiButton)
+ * @version  v2.0
  */
 
 #include "key.h"
+#include "temperature.h"
 
-/* GPIO 引脚定义结构 */
-typedef struct {
-    uint16_t pin;
-    GPIO_TypeDef *port;
-} GPIO_PinDef_t;
+/* 按键句柄实例 */
+Button btn_set;
+Button btn_add;
+Button btn_sub;
+Button btn_shift;
+Button btn_reset;
 
-/* 按键引脚映射表 */
-static const GPIO_PinDef_t key_pins[KEY_ID_COUNT] = {
-    {Btn1_Pin, GPIOB},     /* KEY_ID_SET */
-    {Btn2_Pin, GPIOB},     /* KEY_ID_ADD */
-    {Btn3_Pin, GPIOB},     /* KEY_ID_SUB */
-    {Btn4_Pin, GPIOB},     /* KEY_ID_SHIFT */
-    {Reset_Btn_Pin, GPIOA},/* KEY_ID_RESET - PA15 */
-};
-
-/* 按键状态机结构 */
-typedef struct {
-    KeyState_t state;           /* 当前状态 */
-    KeyState_t last_state;      /* 上次状态 */
-    uint32_t press_time;        /* 按下时刻 (ms) */
-    uint8_t trigger_flag;       /* 触发标志 */
-} KeyStatus_t;
-
-/* 按键状态数组 */
-static KeyStatus_t key_status[KEY_ID_COUNT] = {0};
+/* 按键事件标志 */
+volatile uint8_t key_set_pressed = 0;
+volatile uint8_t key_add_pressed = 0;
+volatile uint8_t key_sub_pressed = 0;
+volatile uint8_t key_shift_pressed = 0;
+volatile uint8_t key_reset_pressed = 0;
 
 /**
- * @brief  初始化按键 GPIO
+ * @brief  GPIO 读取函数 - MultiButton 调用
+ * @param  button_id: 按键 ID
+ * @retval GPIO 电平 (0 或 1)
+ */
+uint8_t KEY_ReadPin(uint8_t button_id)
+{
+    switch (button_id) {
+        case KEY_ID_SET:
+            return HAL_GPIO_ReadPin(GPIOB, Btn1_Pin);
+        case KEY_ID_ADD:
+            return HAL_GPIO_ReadPin(GPIOB, Btn2_Pin);
+        case KEY_ID_SUB:
+            return HAL_GPIO_ReadPin(GPIOB, Btn3_Pin);
+        case KEY_ID_SHIFT:
+            return HAL_GPIO_ReadPin(GPIOB, Btn4_Pin);
+        case KEY_ID_RESET:
+            return HAL_GPIO_ReadPin(GPIOA, Reset_Btn_Pin);
+        default:
+            return 1;
+    }
+}
+
+/* 按键按下回调 - 设置标志 */
+static void on_press_down(Button* btn, void* user_data)
+{
+    (void)btn;
+    KeyId_t key_id = (KeyId_t)(uintptr_t)user_data;
+    switch (key_id) {
+        case KEY_ID_SET: key_set_pressed = 1; break;
+        case KEY_ID_ADD: key_add_pressed = 1; break;
+        case KEY_ID_SUB: key_sub_pressed = 1; break;
+        case KEY_ID_SHIFT: key_shift_pressed = 1; break;
+        case KEY_ID_RESET: key_reset_pressed = 1; break;
+    }
+}
+
+/**
+ * @brief  初始化按键
  */
 void KEY_Init(void)
 {
-    for (int i = 0; i < KEY_ID_COUNT; i++)
-    {
-        key_status[i].state = KEY_STATE_RELEASED;
-        key_status[i].last_state = KEY_STATE_RELEASED;
-        key_status[i].press_time = 0;
-        key_status[i].trigger_flag = 0;
-    }
+    /* 初始化所有按键 (低电平有效) */
+    button_init(&btn_set, KEY_ReadPin, 0, KEY_ID_SET);
+    button_init(&btn_add, KEY_ReadPin, 0, KEY_ID_ADD);
+    button_init(&btn_sub, KEY_ReadPin, 0, KEY_ID_SUB);
+    button_init(&btn_shift, KEY_ReadPin, 0, KEY_ID_SHIFT);
+    button_init(&btn_reset, KEY_ReadPin, 0, KEY_ID_RESET);
+
+    /* 注册按下事件回调 */
+    button_attach(&btn_set, BTN_PRESS_DOWN, on_press_down, (void*)(uintptr_t)KEY_ID_SET);
+    button_attach(&btn_add, BTN_PRESS_DOWN, on_press_down, (void*)(uintptr_t)KEY_ID_ADD);
+    button_attach(&btn_sub, BTN_PRESS_DOWN, on_press_down, (void*)(uintptr_t)KEY_ID_SUB);
+    button_attach(&btn_shift, BTN_PRESS_DOWN, on_press_down, (void*)(uintptr_t)KEY_ID_SHIFT);
+    button_attach(&btn_reset, BTN_PRESS_DOWN, on_press_down, (void*)(uintptr_t)KEY_ID_RESET);
+
+    /* 启动按键处理 */
+    button_start(&btn_set);
+    button_start(&btn_add);
+    button_start(&btn_sub);
+    button_start(&btn_shift);
+    button_start(&btn_reset);
 }
 
 /**
- * @brief  读取按键状态 (低电平有效)
- * @param  key_id: 按键 ID
- * @retval 按键状态 (KEY_STATE_PRESSED 或 KEY_STATE_RELEASED)
+ * @brief  按键事件处理 - 在主循环中调用
  */
-KeyState_t KEY_Read(KeyId_t key_id)
+void KEY_Handler(void)
 {
-    if (key_id >= KEY_ID_COUNT)
-    {
-        return KEY_STATE_RELEASED;
-    }
-
-    return (KeyState_t)HAL_GPIO_ReadPin(key_pins[key_id].port, key_pins[key_id].pin);
-}
-
-/**
- * @brief  扫描按键，检测按下事件 (非阻塞方式)
- * @param  key_id: 按键 ID
- * @retval 1 = 检测到按下，0 = 无按下
- */
-uint8_t KEY_Scan(KeyId_t key_id)
-{
-    KeyState_t curr_state;
-    uint32_t curr_time;
-
-    if (key_id >= KEY_ID_COUNT)
-    {
-        return 0;
-    }
-
-    curr_state = KEY_Read(key_id);
-    curr_time = HAL_GetTick();
-
-    /* 状态机处理 */
-    switch (key_status[key_id].state)
-    {
-        case KEY_STATE_RELEASED:
-            if (curr_state == KEY_STATE_PRESSED)
-            {
-                /* 检测到按下，记录时间 */
-                key_status[key_id].press_time = curr_time;
-                key_status[key_id].state = KEY_STATE_PRESSED;
-            }
-            break;
-
-        case KEY_STATE_PRESSED:
-            /* 检查是否已稳定按下 (消抖时间) */
-            if (curr_time - key_status[key_id].press_time >= KEY_DEBOUNCE_DELAY)
-            {
-                /* 再次确认按键状态 */
-                if (KEY_Read(key_id) == KEY_STATE_PRESSED)
-                {
-                    /* 确认有效按下，设置触发标志 */
-                    key_status[key_id].trigger_flag = 1;
-                }
-                else
-                {
-                    /* 误触发，返回释放状态 */
-                    key_status[key_id].state = KEY_STATE_RELEASED;
-                }
-            }
-            break;
-
-        default:
-            break;
-    }
-
-    /* 检测按键释放 */
-    if (curr_state == KEY_STATE_RELEASED && key_status[key_id].state == KEY_STATE_PRESSED)
-    {
-        key_status[key_id].state = KEY_STATE_RELEASED;
-    }
-
-    /* 如果有触发标志，清除并返回 1 */
-    if (key_status[key_id].trigger_flag)
-    {
-        key_status[key_id].trigger_flag = 0;
-        return 1;
-    }
-
-    return 0;
+    /* 调用 MultiButton 状态机处理 */
+    button_ticks();
 }

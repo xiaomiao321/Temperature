@@ -156,6 +156,7 @@ int main(void) {
 
     /* USER CODE BEGIN 3 */
     /* 处理按键和显示 - 先处理按键，让复位请求优先响应 */
+    /* 注意：button_ticks() 已在 SysTick 中断中每 5ms 调用 */
     TEMP_SETTING_Handler();
     TEMP_SETTING_Display();
 

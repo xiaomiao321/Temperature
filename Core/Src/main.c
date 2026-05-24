@@ -137,12 +137,9 @@ int main(void)
   HC595_2_Init();  /* 初始化第二组数码管 */
   TEMP_SETTING_Init();
 
-  /* 上电测试继电器：拉高两个继电器引脚约 1 秒 */
-  // HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_SET);
-  // HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_SET);
-  // HAL_Delay(1000);
-  // HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_RESET);
-  // HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_RESET);
+  /* 上电初始化继电器状态：默认正常状态（照明灯开，蜂鸣器关） */
+  HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_RESET);   /* 24V 蜂鸣器关闭 */
+  HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_SET);   /* 220V 照明灯开启 */
 
   /* USER CODE END 2 */
 

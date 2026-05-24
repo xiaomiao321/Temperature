@@ -102,7 +102,7 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
     {
         /* 强制复位模式：即使超温也不锁定警报 */
         temp_alarm_latched = 0;
-        
+
         /* 如果温度已恢复正常，清除强制复位标志，恢复自动报警功能 */
         if (!temp_alarm)
         {
@@ -115,14 +115,20 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
         temp_alarm_latched = 1;
     }
 
-    /* 根据锁定警报状态控制 LED (低电平点亮) */
+    /* 根据锁定警报状态控制 LED 和继电器 */
     if (temp_alarm_latched)
     {
-        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);  /* 点亮 LED */
+        /* 超温报警状态 */
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);      /* 点亮 LED */
+        HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_SET);    /* 24V 蜂鸣器开启 */
+        HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_RESET);  /* 220V 照明灯关闭 */
     }
     else
     {
-        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);  /* 熄灭 LED */
+        /* 正常状态 */
+        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);        /* 熄灭 LED */
+        HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_RESET);  /* 24V 蜂鸣器关闭 */
+        HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_SET);    /* 220V 照明灯开启 */
     }
 
     return 0;  /* 解析成功 */

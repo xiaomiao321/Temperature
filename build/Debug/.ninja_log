@@ -42,3 +42,6 @@
 9	261	8012136750658047	CMakeFiles/Final.dir/Core/Src/temp_setting.c.obj	a3f6c7e1788db98d
 3	267	8012136750722786	CMakeFiles/Final.dir/Core/Src/main.c.obj	6a580043014e75c6
 267	464	8012136752558390	Final.elf	8c41377fb64f89b7
+11	302	8012151953230427	CMakeFiles/Final.dir/Core/Src/temperature.c.obj	63f46f2067edfdf0
+4	303	8012151953230427	CMakeFiles/Final.dir/Core/Src/main.c.obj	6a580043014e75c6
+303	556	8012151955627146	Final.elf	8c41377fb64f89b7

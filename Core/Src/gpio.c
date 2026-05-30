@@ -57,8 +57,8 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, SDI1_Pin|SCLK1_Pin|LOAD1_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, Relay_24_Pin|Relay_220_Pin|SDI2_Pin|SCLK2_Pin
-                          |LOAD2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, LED1_Pin|LED2_Pin|Relay_24_Pin|Relay_220_Pin
+                          |SDI2_Pin|SCLK2_Pin|LOAD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : LED_Pin */
   GPIO_InitStruct.Pin = LED_Pin;
@@ -80,20 +80,20 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Reset_Btn_Pin */
-  GPIO_InitStruct.Pin = Reset_Btn_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(Reset_Btn_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : Relay_24_Pin Relay_220_Pin SDI2_Pin SCLK2_Pin
-                           LOAD2_Pin */
-  GPIO_InitStruct.Pin = Relay_24_Pin|Relay_220_Pin|SDI2_Pin|SCLK2_Pin
-                          |LOAD2_Pin;
+  /*Configure GPIO pins : LED1_Pin LED2_Pin Relay_24_Pin Relay_220_Pin
+                           SDI2_Pin SCLK2_Pin LOAD2_Pin */
+  GPIO_InitStruct.Pin = LED1_Pin|LED2_Pin|Relay_24_Pin|Relay_220_Pin
+                          |SDI2_Pin|SCLK2_Pin|LOAD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : Manual_Btn_Pin Reset_Btn_Pin */
+  GPIO_InitStruct.Pin = Manual_Btn_Pin|Reset_Btn_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
 }
 

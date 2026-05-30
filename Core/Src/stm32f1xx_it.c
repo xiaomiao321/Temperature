@@ -20,9 +20,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f1xx_it.h"
-#include "multi_button.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "multi_button.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/

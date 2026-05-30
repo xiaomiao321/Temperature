@@ -52,5 +52,6 @@ uint16_t TEMP_SETTING_GetValue1(void);  /* 获取第一组设置值 */
 uint16_t TEMP_SETTING_GetValue2(void);  /* 获取第二组设置值 */
 void TEMP_SETTING_Display(void);  /* 更新显示 */
 SetGroup_t TEMP_SETTING_GetCurrentGroup(void);  /* 获取当前设置的组 */
+uint8_t TEMP_SETTING_SaveToFlash(void);  /* 保存阈值到 Flash */
 
 #endif /* __TEMP_SETTING_H */

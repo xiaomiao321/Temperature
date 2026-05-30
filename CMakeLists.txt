@@ -50,6 +50,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/key.c
     Core/Src/temp_setting.c
     Core/Src/temperature.c
+    Core/Src/iwdg.c
 )
 
 # Add include paths

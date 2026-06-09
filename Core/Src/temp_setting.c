@@ -1,7 +1,7 @@
 /*
  * @file     temp_setting.c
  * @brief    温度阈值设置模块 - 支持两组独立阈值
- * @version  v2.0
+ * @version  v2.1
  */
 
 #include "temp_setting.h"
@@ -9,6 +9,12 @@
 #include "hc595.h"
 #include "main.h"
 #include "temperature.h"
+#include "stm32f1xx_hal.h"
+
+/* ========== Flash 存储配置 ========== */
+/* 使用 Flash 最后一页存储阈值 (STM32F103xB Flash 大小 64KB) */
+#define FLASH_SAVE_ADDR  (0x08000000 + 0xFC00)  /* 最后 1KB */
+#define FLASH_MAGIC_NUM  0xA5A5                  /* 魔数，标识数据已保存 */
 
 /* 全局变量 */
 static SetMode_t g_setMode = SET_MODE_NORMAL;     /* 当前模式 */
@@ -20,6 +26,55 @@ static uint8_t g_blinkState = 1;                  /* 闪烁状态 (1-亮，0-灭
 static uint32_t g_lastBlinkTime = 0;              /* 上次闪烁时间 */
 static uint32_t g_setPressTime = 0;               /* SET 键按下时间 */
 static uint8_t g_longPressDetected = 0;           /* 长按标志 */
+
+/**
+ * @brief  从 Flash 加载阈值
+ */
+static void TEMP_SETTING_LoadFromFlash(void)
+{
+    uint16_t magic = *(__IO uint16_t*)FLASH_SAVE_ADDR;
+    
+    if (magic == FLASH_MAGIC_NUM) {
+        /* 数据有效，加载阈值 */
+        uint16_t val1 = *(__IO uint16_t*)(FLASH_SAVE_ADDR + 2);
+        uint16_t val2 = *(__IO uint16_t*)(FLASH_SAVE_ADDR + 4);
+        
+        /* 验证范围 */
+        if (val1 <= 999) g_setValue1 = val1;
+        if (val2 <= 999) g_setValue2 = val2;
+    }
+    /* 否则使用默认值 30 */
+}
+
+/**
+ * @brief  保存阈值到 Flash
+ */
+static void TEMP_SETTING_SaveToFlash(void)
+{
+    uint32_t pageError;
+    FLASH_EraseInitTypeDef eraseInit;
+    
+    /* 解锁 Flash */
+    HAL_FLASH_Unlock();
+    
+    /* 擦除页面 */
+    eraseInit.TypeErase = FLASH_TYPEERASE_PAGES;
+    eraseInit.PageAddress = FLASH_SAVE_ADDR;
+    eraseInit.NbPages = 1;
+    HAL_FLASHEx_Erase(&eraseInit, &pageError);
+    
+    /* 写入魔数 */
+    HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, FLASH_SAVE_ADDR, FLASH_MAGIC_NUM);
+    
+    /* 写入第一组阈值 */
+    HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, FLASH_SAVE_ADDR + 2, g_setValue1);
+    
+    /* 写入第二组阈值 */
+    HAL_FLASH_Program(FLASH_TYPEPROGRAM_HALFWORD, FLASH_SAVE_ADDR + 4, g_setValue2);
+    
+    /* 锁定 Flash */
+    HAL_FLASH_Lock();
+}
 
 /* 调试用全局变量 */
 uint16_t DBG_setValue1 = 30;      /* 第一组设置值 */
@@ -41,6 +96,9 @@ extern uint8_t temp_alarm;
  */
 void TEMP_SETTING_Init(void)
 {
+    /* 从 Flash 加载阈值 */
+    TEMP_SETTING_LoadFromFlash();
+    
     /* 上电自检：显示测试序列 */
     HC595_Test888();      /* 显示 888 */
     HAL_Delay(500);
@@ -76,7 +134,7 @@ static void handle_set_key(void)
     if (key_set_pressed)
     {
         key_set_pressed = 0;  /* 清除标志 */
-        
+
         if (g_setMode == SET_MODE_NORMAL)
         {
             /* 进入设置模式，从个位开始 */
@@ -92,6 +150,9 @@ static void handle_set_key(void)
             /* 确认设置，返回正常模式 */
             g_setMode = SET_MODE_NORMAL;
             g_blinkState = 1;  /* 停止闪烁，全亮 */
+            
+            /* 保存阈值到 Flash */
+            TEMP_SETTING_SaveToFlash();
         }
     }
 }

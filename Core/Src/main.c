@@ -154,6 +154,9 @@ int main(void)
     TEMP_SETTING_Handler();
     TEMP_SETTING_Display();
 
+    /* 处理警报逻辑 (手动按钮/复位/LED) */
+    TEMP_Alarm_Handler();
+
     /* 更新阈值到全局变量 */
     g_temp_threshold1 = TEMP_SETTING_GetValue1();
     g_temp_threshold2 = TEMP_SETTING_GetValue2();

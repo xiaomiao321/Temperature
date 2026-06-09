@@ -13,6 +13,7 @@ Button btn_add;
 Button btn_sub;
 Button btn_shift;
 Button btn_reset;
+Button btn_manual;
 
 /* 按键事件标志 */
 volatile uint8_t key_set_pressed = 0;
@@ -20,6 +21,7 @@ volatile uint8_t key_add_pressed = 0;
 volatile uint8_t key_sub_pressed = 0;
 volatile uint8_t key_shift_pressed = 0;
 volatile uint8_t key_reset_pressed = 0;
+volatile uint8_t key_manual_pressed = 0;
 
 /**
  * @brief  GPIO 读取函数 - MultiButton 调用
@@ -39,6 +41,8 @@ uint8_t KEY_ReadPin(uint8_t button_id)
             return HAL_GPIO_ReadPin(GPIOB, Btn4_Pin);
         case KEY_ID_RESET:
             return HAL_GPIO_ReadPin(GPIOA, Reset_Btn_Pin);
+        case KEY_ID_MANUAL:
+            return HAL_GPIO_ReadPin(GPIOA, Manual_Btn_Pin);
         default:
             return 1;
     }
@@ -55,6 +59,7 @@ static void on_press_down(Button* btn, void* user_data)
         case KEY_ID_SUB: key_sub_pressed = 1; break;
         case KEY_ID_SHIFT: key_shift_pressed = 1; break;
         case KEY_ID_RESET: key_reset_pressed = 1; break;
+        case KEY_ID_MANUAL: key_manual_pressed = 1; break;
     }
 }
 
@@ -69,6 +74,7 @@ void KEY_Init(void)
     button_init(&btn_sub, KEY_ReadPin, 0, KEY_ID_SUB);
     button_init(&btn_shift, KEY_ReadPin, 0, KEY_ID_SHIFT);
     button_init(&btn_reset, KEY_ReadPin, 0, KEY_ID_RESET);
+    button_init(&btn_manual, KEY_ReadPin, 0, KEY_ID_MANUAL);
 
     /* 注册按下事件回调 */
     button_attach(&btn_set, BTN_PRESS_DOWN, on_press_down, (void*)(uintptr_t)KEY_ID_SET);
@@ -76,6 +82,7 @@ void KEY_Init(void)
     button_attach(&btn_sub, BTN_PRESS_DOWN, on_press_down, (void*)(uintptr_t)KEY_ID_SUB);
     button_attach(&btn_shift, BTN_PRESS_DOWN, on_press_down, (void*)(uintptr_t)KEY_ID_SHIFT);
     button_attach(&btn_reset, BTN_PRESS_DOWN, on_press_down, (void*)(uintptr_t)KEY_ID_RESET);
+    button_attach(&btn_manual, BTN_PRESS_DOWN, on_press_down, (void*)(uintptr_t)KEY_ID_MANUAL);
 
     /* 启动按键处理 */
     button_start(&btn_set);
@@ -83,6 +90,7 @@ void KEY_Init(void)
     button_start(&btn_sub);
     button_start(&btn_shift);
     button_start(&btn_reset);
+    button_start(&btn_manual);
 }
 
 /**

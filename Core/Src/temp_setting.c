@@ -281,17 +281,12 @@ static void handle_shift_key(void)
 }
 
 /**
- * @brief  处理复位键 (解除警报锁定)
+ * @brief  处理复位键 (复位键已在 temperature.c 中处理)
  */
 static void handle_reset_key(void)
 {
-    if (key_reset_pressed)
-    {
-        key_reset_pressed = 0;  /* 清除标志 */
-        
-        /* 复位警报 */
-        TEMP_Alarm_Reset();
-    }
+    /* 复位键已在 TEMP_Alarm_Handler 中处理，此处不需要额外操作 */
+    /* key_reset_pressed 标志会被 TEMP_Alarm_Handler 清除 */
 }
 
 /**

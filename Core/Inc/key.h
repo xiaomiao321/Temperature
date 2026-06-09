@@ -18,6 +18,7 @@ typedef enum {
     KEY_ID_SUB = 3,      /* 减键 - Btn3 (PB0) */
     KEY_ID_SHIFT = 4,    /* 左移切换键 - Btn4 (PB1) */
     KEY_ID_RESET = 5,    /* 复位键 - Reset_Btn (PA15) */
+    KEY_ID_MANUAL = 6,   /* 手动报警键 - Manual_Btn (PA12) */
 } KeyId_t;
 
 /* 按键句柄 */
@@ -26,6 +27,7 @@ extern Button btn_add;
 extern Button btn_sub;
 extern Button btn_shift;
 extern Button btn_reset;
+extern Button btn_manual;
 
 /* 按键事件标志 (供外部查询) */
 extern volatile uint8_t key_set_pressed;
@@ -33,6 +35,7 @@ extern volatile uint8_t key_add_pressed;
 extern volatile uint8_t key_sub_pressed;
 extern volatile uint8_t key_shift_pressed;
 extern volatile uint8_t key_reset_pressed;
+extern volatile uint8_t key_manual_pressed;
 
 /* 函数声明 */
 void KEY_Init(void);

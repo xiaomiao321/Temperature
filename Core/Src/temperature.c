@@ -16,13 +16,18 @@
 extern uint16_t g_temp_threshold1;  /* 第一组阈值 (CH1-CH4) */
 extern uint16_t g_temp_threshold2;  /* 第二组阈值 (CH5-CH8) */
 
+/* 外部按键状态 */
+extern uint8_t key_reset_pressed;   /* 复位键标志 */
+extern uint8_t key_manual_pressed;  /* 手动键标志 */
+
 float temperature[TEMP_CHANNEL_NUM] = {0};
 uint8_t temp_valid[TEMP_CHANNEL_NUM] = {0};  /* 1=有效，0=传感器故障 */
 
 /* 温度告警标志 */
-uint8_t temp_alarm = 0;  /* 1=有通道超温，0=正常 */
-uint8_t temp_alarm_latched = 0;  /* 警报锁定标志 - 按下复位键前保持警报 */
-uint8_t temp_alarm_force_reset = 0;  /* 强制复位标志 - 按下复位键后暂时忽略超温 */
+uint8_t temp_alarm = 0;           /* 1=有通道超温，0=正常 */
+uint8_t temp_alarm_latched = 0;   /* 警报锁定标志 - 按下复位键前保持警报 */
+uint8_t manual_alarm = 0;         /* 手动报警标志 */
+uint8_t blue_led_flash = 0;       /* 蓝灯闪烁标志（接收到有效数据时闪一下） */
 
 /**
  * @brief 解析 Modbus 0x04 命令返回的温度数据
@@ -37,23 +42,23 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
     {
         return 1;  /* 数据长度不足 */
     }
-    
+
     /* 检查帧头 */
     if (buf[0] != 0x01 || buf[1] != 0x04)
     {
         return 1;  /* 帧头不正确 */
     }
-    
+
     /* 检查数据字节数 (应该是 0x10 = 16 字节，对应 8 路温度) */
     if (buf[2] != 0x10)
     {
         return 1;  /* 数据长度不正确 */
     }
-    
+
     /* 解析 8 路温度数据 */
     /* 数据从 buf[3] 开始，每路温度占 2 字节 (大端序) */
     uint8_t alarm_flag = 0;
-    
+
     for (int i = 0; i < TEMP_CHANNEL_NUM; i++)
     {
         uint16_t offset = 3 + i * 2;
@@ -93,45 +98,100 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
             }
         }
     }
+
+    /* 更新告警标志 - 温度超温时锁定，直到复位 */
+    if (alarm_flag)
+    {
+        temp_alarm_latched = 1;  /* 锁定警报 */
+    }
+    temp_alarm = alarm_flag;  /* 当前超温状态 */
+
+    /* 接收到有效数据，蓝灯闪一下 */
+    blue_led_flash = 1;
+
+    return 0;  /* 解析成功 */
+}
+
+/**
+ * @brief  处理警报逻辑（包括手动按钮、温度报警、复位、LED）
+ *         在主循环中调用
+ */
+void TEMP_Alarm_Handler(void)
+{
+    static uint32_t blue_flash_time = 0;
     
-    /* 更新告警标志 */
-    temp_alarm = alarm_flag;
-
-    /* 警报锁定逻辑：一旦超温，锁定警报状态，直到按下复位键 */
-    if (temp_alarm_force_reset)
+    /* 处理手动报警按钮 - 切换开关 */
+    if (key_manual_pressed)
     {
-        /* 强制复位模式：即使超温也不锁定警报 */
-        temp_alarm_latched = 0;
-
-        /* 如果温度已恢复正常，清除强制复位标志，恢复自动报警功能 */
-        if (!temp_alarm)
-        {
-            temp_alarm_force_reset = 0;
-        }
-    }
-    else if (temp_alarm)
-    {
-        /* 有超温且无复位请求，锁定警报 */
-        temp_alarm_latched = 1;
+        key_manual_pressed = 0;  /* 清除标志 */
+        manual_alarm = !manual_alarm;  /* 切换手动报警状态 */
     }
 
-    /* 根据锁定警报状态控制 LED 和继电器 */
-    if (temp_alarm_latched)
+    /* 处理复位按钮 - 清除所有报警 */
+    if (key_reset_pressed)
     {
-        /* 超温报警状态 */
-        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);      /* 点亮 LED */
-        HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_SET);    /* 24V 蜂鸣器开启 */
-        HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_RESET);  /* 220V 照明灯关闭 */
+        key_reset_pressed = 0;  /* 清除标志 */
+        manual_alarm = 0;       /* 清除手动报警 */
+        temp_alarm_latched = 0; /* 清除温度报警锁定 */
+    }
+
+    /* 综合报警条件：手动报警 或 温度报警锁定 */
+    uint8_t alarm_active = manual_alarm || temp_alarm_latched;
+
+    /* 控制 24V 继电器（蜂鸣器） */
+    if (alarm_active)
+    {
+        HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_SET);   /* 蜂鸣器响 */
     }
     else
     {
-        /* 正常状态 */
-        HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_SET);        /* 熄灭 LED */
-        HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_RESET);  /* 24V 蜂鸣器关闭 */
-        HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_SET);    /* 220V 照明灯开启 */
+        HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_RESET); /* 蜂鸣器关 */
     }
 
-    return 0;  /* 解析成功 */
+    /* 控制 LED 指示灯 */
+    if (temp_alarm_latched)
+    {
+        /* 温度报警 - 红灯亮 */
+        HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, GPIO_PIN_RESET);   /* 红灯亮 (低电平) */
+    }
+    else
+    {
+        HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, GPIO_PIN_SET);     /* 红灯灭 */
+    }
+
+    if (manual_alarm)
+    {
+        /* 手动报警 - 黄灯亮 */
+        HAL_GPIO_WritePin(LED_Yellow_GPIO_Port, LED_Yellow_Pin, GPIO_PIN_RESET);  /* 黄灯亮 */
+    }
+    else
+    {
+        HAL_GPIO_WritePin(LED_Yellow_GPIO_Port, LED_Yellow_Pin, GPIO_PIN_SET);    /* 黄灯灭 */
+    }
+
+    /* 蓝灯控制 - 接收到有效数据时闪一下 (约 200ms) */
+    if (blue_led_flash)
+    {
+        HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, GPIO_PIN_RESET); /* 蓝灯亮 */
+        if (HAL_GetTick() - blue_flash_time >= 200)
+        {
+            blue_led_flash = 0;
+            blue_flash_time = 0;
+        }
+    }
+    else
+    {
+        /* 蓝灯在正常状态下可以表示运行状态 - 慢闪 (1Hz) */
+        static uint32_t last_toggle = 0;
+        static uint8_t blue_state = 0;
+        
+        if (HAL_GetTick() - last_toggle >= 500)
+        {
+            blue_state = !blue_state;
+            HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, blue_state ? GPIO_PIN_RESET : GPIO_PIN_SET);
+            last_toggle = HAL_GetTick();
+        }
+    }
 }
 
 /**
@@ -163,10 +223,10 @@ uint8_t Get_Temp_Valid(uint8_t channel)
 }
 
 /**
- * @brief 复位警报（清除锁定状态）
+ * @brief 获取当前报警状态
+ * @retval 1=有报警，0=正常
  */
-void TEMP_Alarm_Reset(void)
+uint8_t TEMP_Get_AlarmState(void)
 {
-    /* 设置强制复位标志，下次温度解析时会忽略超温状态 */
-    temp_alarm_force_reset = 1;
+    return temp_alarm_latched || manual_alarm;
 }

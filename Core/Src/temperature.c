@@ -138,14 +138,18 @@ void TEMP_Alarm_Handler(void)
     /* 综合报警条件：手动报警 或 温度报警锁定 */
     uint8_t alarm_active = manual_alarm || temp_alarm_latched;
 
-    /* 控制 24V 继电器（蜂鸣器） */
+    /* 控制继电器 */
     if (alarm_active)
     {
-        HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_SET);   /* 蜂鸣器响 */
+        /* 报警状态：24V 导通（蜂鸣器响），220V 关断（照明灯灭） */
+        HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_SET);
+        HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_RESET);
     }
     else
     {
-        HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_RESET); /* 蜂鸣器关 */
+        /* 正常状态：24V 关断（蜂鸣器关），220V 导通（照明灯开） */
+        HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_SET);
     }
 
     /* 控制 LED 指示灯 */

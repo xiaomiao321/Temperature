@@ -28,6 +28,7 @@ uint8_t temp_alarm = 0;           /* 1=有通道超温，0=正常 */
 uint8_t temp_alarm_latched = 0;   /* 警报锁定标志 - 按下复位键前保持警报 */
 uint8_t manual_alarm = 0;         /* 手动报警标志 */
 uint8_t blue_led_flash = 0;       /* 蓝灯闪烁标志（接收到有效数据时闪一下） */
+uint32_t blue_flash_time = 0;     /* 蓝灯闪烁时间记录 */
 
 /**
  * @brief 解析 Modbus 0x04 命令返回的温度数据
@@ -79,19 +80,19 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
             temperature[i] = (float)temp_raw / 10.0f;
             temp_valid[i] = 1;  /* 标记为有效 */
 
-            /* 检查是否超过阈值 - 两组独立阈值 */
-            if (i < 4)
+            /* 检查是否超过阈值 - 通道 8 使用阈值 2，其他通道使用阈值 1 */
+            if (i == 7)  /* 通道 8 (索引 7) */
             {
-                /* CH1-CH4 使用第一组阈值 */
-                if (temperature[i] >= (float)g_temp_threshold1)
+                /* CH8 使用第二组阈值 */
+                if (temperature[i] >= (float)g_temp_threshold2)
                 {
                     alarm_flag = 1;
                 }
             }
             else
             {
-                /* CH5-CH8 使用第二组阈值 */
-                if (temperature[i] >= (float)g_temp_threshold2)
+                /* CH1-CH7 使用第一组阈值 */
+                if (temperature[i] >= (float)g_temp_threshold1)
                 {
                     alarm_flag = 1;
                 }
@@ -108,6 +109,7 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
 
     /* 接收到有效数据，蓝灯闪一下 */
     blue_led_flash = 1;
+    blue_flash_time = HAL_GetTick();  /* 记录闪烁开始时间 */
 
     return 0;  /* 解析成功 */
 }
@@ -118,8 +120,6 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
  */
 void TEMP_Alarm_Handler(void)
 {
-    static uint32_t blue_flash_time = 0;
-    
     /* 处理手动报警按钮 - 切换开关 */
     if (key_manual_pressed)
     {
@@ -156,27 +156,27 @@ void TEMP_Alarm_Handler(void)
     if (temp_alarm_latched)
     {
         /* 温度报警 - 红灯亮 */
-        HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, GPIO_PIN_RESET);   /* 红灯亮 (低电平) */
+        HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, GPIO_PIN_SET);   /* 红灯亮 */
     }
     else
     {
-        HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, GPIO_PIN_SET);     /* 红灯灭 */
+        HAL_GPIO_WritePin(LED_Red_GPIO_Port, LED_Red_Pin, GPIO_PIN_RESET); /* 红灯灭 */
     }
 
     if (manual_alarm)
     {
         /* 手动报警 - 黄灯亮 */
-        HAL_GPIO_WritePin(LED_Yellow_GPIO_Port, LED_Yellow_Pin, GPIO_PIN_RESET);  /* 黄灯亮 */
+        HAL_GPIO_WritePin(LED_Yellow_GPIO_Port, LED_Yellow_Pin, GPIO_PIN_SET);  /* 黄灯亮 */
     }
     else
     {
-        HAL_GPIO_WritePin(LED_Yellow_GPIO_Port, LED_Yellow_Pin, GPIO_PIN_SET);    /* 黄灯灭 */
+        HAL_GPIO_WritePin(LED_Yellow_GPIO_Port, LED_Yellow_Pin, GPIO_PIN_RESET); /* 黄灯灭 */
     }
 
     /* 蓝灯控制 - 接收到有效数据时闪一下 (约 200ms) */
     if (blue_led_flash)
     {
-        HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, GPIO_PIN_RESET); /* 蓝灯亮 */
+        HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, GPIO_PIN_SET); /* 蓝灯亮 */
         if (HAL_GetTick() - blue_flash_time >= 200)
         {
             blue_led_flash = 0;
@@ -192,7 +192,7 @@ void TEMP_Alarm_Handler(void)
         if (HAL_GetTick() - last_toggle >= 500)
         {
             blue_state = !blue_state;
-            HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, blue_state ? GPIO_PIN_RESET : GPIO_PIN_SET);
+            HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, blue_state ? GPIO_PIN_SET : GPIO_PIN_RESET);
             last_toggle = HAL_GetTick();
         }
     }

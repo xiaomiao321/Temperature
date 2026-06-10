@@ -204,11 +204,15 @@ void TEMP_Alarm_Handler(void)
     /* === 蓝灯控制 - 长灭，收到数据闪一下 === */
     if (blue_led_flash)
     {
-        HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, GPIO_PIN_SET); /* 蓝灯亮 */
-        if (HAL_GetTick() - blue_flash_time >= 200)
+        uint32_t elapsed = HAL_GetTick() - blue_flash_time;
+        if (elapsed >= 50)  /* 亮 50ms 后熄灭 */
         {
             blue_led_flash = 0;
-            HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, GPIO_PIN_RESET); /* 蓝灯灭 */
+            HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, GPIO_PIN_RESET);
+        }
+        else
+        {
+            HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, GPIO_PIN_SET); /* 蓝灯亮 */
         }
     }
     else

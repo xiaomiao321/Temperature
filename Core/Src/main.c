@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "dma.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -49,7 +50,12 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+/* UART2 DMA 接收缓冲区 */
+#define UART2_BUF_SIZE  64
+uint8_t uart2_dma_buf[UART2_BUF_SIZE];      /* DMA 接收缓冲区 */
+uint8_t uart2_rx_buf[UART2_BUF_SIZE];       /* 应用接收缓冲区 */
+volatile uint16_t uart2_rx_len = 0;         /* 接收到的数据长度 */
+volatile uint8_t uart2_frame_ready = 0;     /* 帧接收完成标志 */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -127,6 +133,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */

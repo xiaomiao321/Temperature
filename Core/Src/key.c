@@ -92,12 +92,3 @@ void KEY_Init(void)
     button_start(&btn_reset);
     button_start(&btn_manual);
 }
-
-/**
- * @brief  按键事件处理 - 在主循环中调用
- */
-void KEY_Handler(void)
-{
-    /* 调用 MultiButton 状态机处理 */
-    button_ticks();
-}

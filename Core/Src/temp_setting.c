@@ -76,17 +76,6 @@ static void TEMP_SETTING_SaveToFlash(void)
     HAL_FLASH_Lock();
 }
 
-/* 调试用全局变量 */
-uint16_t DBG_setValue1 = 30;      /* 第一组设置值 */
-uint16_t DBG_setValue2 = 30;      /* 第二组设置值 */
-uint8_t DBG_setMode = 0;          /* 0=正常模式，1=设置模式 */
-uint8_t DBG_setPos = 2;           /* 0=百位，1=十位，2=个位 */
-uint8_t DBG_blinkState = 1;       /* 闪烁状态 */
-uint8_t DBG_currentGroup = 0;     /* 当前设置的组 */
-uint8_t DBG_seg_d1 = 0;           /* 百位显示值 */
-uint8_t DBG_seg_d2 = 0;           /* 十位显示值 */
-uint8_t DBG_seg_d3 = 0;           /* 个位显示值 */
-
 /* 外部温度变量 */
 extern float temperature[8];
 extern uint8_t temp_alarm;
@@ -305,14 +294,6 @@ void TEMP_SETTING_Display(void)
     uint16_t val1 = g_setValue1;
     uint16_t val2 = g_setValue2;
 
-    /* 更新调试变量 */
-    DBG_setValue1 = val1;
-    DBG_setValue2 = val2;
-    DBG_setMode = (uint8_t)g_setMode;
-    DBG_setPos = (uint8_t)g_setPos;
-    DBG_blinkState = g_blinkState;
-    DBG_currentGroup = (uint8_t)g_currentGroup;
-
     if (g_setMode == SET_MODE_NORMAL)
     {
         /* 正常模式 - 两组分别显示各自的阈值 */
@@ -337,7 +318,6 @@ void TEMP_SETTING_Display(void)
         
         /* 显示当前设置组 (带闪烁) */
         d3 = editVal % 10; d2 = (editVal / 10) % 10; d1 = (editVal / 100) % 10;
-        DBG_seg_d1 = d1; DBG_seg_d2 = d2; DBG_seg_d3 = d3;
         if (g_currentGroup == SET_GROUP_1)
             HC595_1_Display3DigitsWithBlink(d1, d2, d3, (uint8_t)g_setPos, g_blinkState);
         else

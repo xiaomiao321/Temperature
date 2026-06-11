@@ -39,7 +39,6 @@ extern volatile uint8_t key_manual_pressed;
 
 /* 函数声明 */
 void KEY_Init(void);
-void KEY_Handler(void);  // 在主循环中调用，处理按键事件
 
 /* GPIO 读取函数 - MultiButton 需要 */
 uint8_t KEY_ReadPin(uint8_t button_id);

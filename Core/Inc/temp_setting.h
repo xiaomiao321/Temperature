@@ -34,17 +34,6 @@ typedef enum {
     SET_GROUP_2 = 1
 } SetGroup_t;
 
-/* 调试用全局变量 */
-extern uint16_t DBG_setValue1;      /* 第一组设置值 */
-extern uint16_t DBG_setValue2;      /* 第二组设置值 */
-extern uint8_t DBG_setMode;         /* 0=正常模式，1=设置模式 */
-extern uint8_t DBG_setPos;          /* 0=百位，1=十位，2=个位 */
-extern uint8_t DBG_blinkState;      /* 闪烁状态 */
-extern uint8_t DBG_currentGroup;    /* 当前设置的组 */
-extern uint8_t DBG_seg_d1;          /* 百位显示值 */
-extern uint8_t DBG_seg_d2;          /* 十位显示值 */
-extern uint8_t DBG_seg_d3;          /* 个位显示值 */
-
 /* 函数声明 */
 void TEMP_SETTING_Init(void);
 void TEMP_SETTING_Handler(void);  /* 按键处理 */

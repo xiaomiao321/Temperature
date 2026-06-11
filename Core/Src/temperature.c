@@ -23,6 +23,9 @@ extern uint8_t key_manual_pressed;  /* 手动键标志 */
 float temperature[TEMP_CHANNEL_NUM] = {0};
 uint8_t temp_valid[TEMP_CHANNEL_NUM] = {0};  /* 1=有效，0=传感器故障 */
 
+/* 报警冷却时间（毫秒）- 复位后在此时间内不触发新报警 */
+#define ALARM_COOLDOWN_TIME  (3 * 60 * 1000UL)  /* 默认 3 分钟，可根据需要修改 */
+
 /* 温度告警标志 */
 uint8_t temp_alarm = 0;           /* 1=有通道超温，0=正常 */
 uint8_t temp_alarm_latched = 0;   /* 警报锁定标志 - 按下复位键前保持警报 */
@@ -31,6 +34,7 @@ uint8_t blue_led_flash = 0;       /* 蓝灯闪烁标志（心跳指示） */
 uint32_t last_temp_time = 0;      /* 上次接收到温度数据的时间 */
 uint32_t blue_flash_end_time = 0; /* 蓝灯闪烁结束时间 */
 uint16_t temp_data_count = 0;     /* 温度数据接收计数器（用于心跳指示） */
+uint32_t alarm_cooldown_end_time = 0;  /* 报警冷却结束时间 */
 
 /**
  * @brief 解析 Modbus 0x04 命令返回的温度数据
@@ -82,7 +86,7 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
             temperature[i] = (float)temp_raw / 10.0f;
             temp_valid[i] = 1;  /* 标记为有效 */
 
-            /* 检查是否超过阈值 - 通道 8 使用阈值 2，其他通道使用阈值 1 */
+            /* 检查是否超过阈值 - CH1-CH7 使用阈值 1，CH8 使用阈值 2 */
             if (i == 7)  /* 通道 8 (索引 7) */
             {
                 /* CH8 使用第二组阈值 */
@@ -105,7 +109,14 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
     /* 更新告警标志 - 温度超温时锁定，直到复位 */
     if (alarm_flag)
     {
-        temp_alarm_latched = 1;  /* 锁定警报 */
+        /* 检查是否在冷却时间内 */
+        if (HAL_GetTick() >= alarm_cooldown_end_time)
+        {
+            /* 冷却时间已过，允许触发新报警 */
+            temp_alarm_latched = 1;  /* 锁定警报 */
+            alarm_cooldown_end_time = HAL_GetTick() + ALARM_COOLDOWN_TIME;  /* 设置冷却结束时间 */
+        }
+        /* 否则在冷却时间内，不触发新报警，但保持当前超温状态 */
     }
     temp_alarm = alarm_flag;  /* 当前超温状态 */
 
@@ -137,9 +148,10 @@ void TEMP_Alarm_Handler(void)
     /* 处理复位按钮 - 清除所有报警 */
     if (key_reset_pressed)
     {
-        key_reset_pressed = 0;  /* 清除标志 */
-        manual_alarm = 0;       /* 清除手动报警 */
-        temp_alarm_latched = 0; /* 清除温度报警锁定 */
+        key_reset_pressed = 0;      /* 清除标志 */
+        manual_alarm = 0;           /* 清除手动报警 */
+        temp_alarm_latched = 0;     /* 清除温度报警锁定 */
+        alarm_cooldown_end_time = HAL_GetTick() + ALARM_COOLDOWN_TIME;  /* 启动冷却时间 */
     }
 
     /* 综合报警条件：手动报警 或 温度报警锁定 */

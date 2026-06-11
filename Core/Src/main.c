@@ -67,11 +67,16 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-#define UART2_BUF_SIZE 64
-uint8_t uart2_rx_buf[UART2_BUF_SIZE];
-uint16_t uart2_rx_len = 0;
+/* 外部变量声明 */
+extern uint8_t uart2_dma_buf[];
+extern uint8_t uart2_rx_buf[];
+extern volatile uint16_t uart2_rx_len;
+extern volatile uint8_t uart2_frame_ready;
+extern DMA_HandleTypeDef hdma_usart2_rx;
 
-/* 全局温度阈值变量 - 两组独立阈值 */
+#define UART2_BUF_SIZE  64
+
+/* 格式化输出温度到 UART1 */
 uint16_t g_temp_threshold1 = 30;  /* 第一组阈值 (CH1-CH4) */
 uint16_t g_temp_threshold2 = 30;  /* 第二组阈值 (CH5-CH8) */
 
@@ -148,6 +153,14 @@ int main(void)
   HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_RESET);   /* 24V 蜂鸣器关闭 */
   HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_SET);   /* 220V 照明灯开启 */
 
+  /* 启动 UART2 DMA 空闲中断接收 */
+  huart2.Instance->CR1 |= USART_CR1_IDLEIE;  /* 使能 IDLE 中断 */
+  
+  /* 启动 DMA 接收 */
+  hdma_usart2_rx.Instance->CNDTR = UART2_BUF_SIZE;
+  __HAL_DMA_ENABLE(&hdma_usart2_rx);
+  HAL_UART_Receive_DMA(&huart2, uart2_dma_buf, UART2_BUF_SIZE);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -168,28 +181,16 @@ int main(void)
     g_temp_threshold1 = TEMP_SETTING_GetValue1();
     g_temp_threshold2 = TEMP_SETTING_GetValue2();
 
-    /* 从 UART2 读取一帧数据 */
-    uart2_rx_len = 0;
-
-    /* 等待第一个字节 (帧起始) */
-    if (HAL_UART_Receive(&huart2, &uart2_rx_buf[0], 1, 500) == HAL_OK) {
-      uart2_rx_len = 1;
-
-      /* 继续接收剩余字节，使用 3ms 帧间隔超时 */
-      while (uart2_rx_len < UART2_BUF_SIZE) {
-        if (HAL_UART_Receive(&huart2, &uart2_rx_buf[uart2_rx_len], 1, 3) ==
-            HAL_OK) {
-          uart2_rx_len++;
-        } else {
-          /* 超时，认为一帧接收完成 */
-          break;
-        }
-      }
+    /* 处理 UART2 接收到的数据 */
+    if (uart2_frame_ready)
+    {
+      uart2_frame_ready = 0;  /* 清除标志 */
 
       /* 解析温度数据 */
-      if (uart2_rx_len >= 21) {
-        if (Parse_Temperature_Data(uart2_rx_buf, uart2_rx_len) == 0) {
-          /* 解析成功，打印温度 */
+      if (uart2_rx_len >= 21)
+      {
+        if (Parse_Temperature_Data(uart2_rx_buf, uart2_rx_len) == 0)
+        {
           Print_Temperature();
         }
       }

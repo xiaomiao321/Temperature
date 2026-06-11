@@ -281,15 +281,6 @@ static void handle_shift_key(void)
 }
 
 /**
- * @brief  处理复位键 (复位键已在 temperature.c 中处理)
- */
-static void handle_reset_key(void)
-{
-    /* 复位键已在 TEMP_Alarm_Handler 中处理，此处不需要额外操作 */
-    /* key_reset_pressed 标志会被 TEMP_Alarm_Handler 清除 */
-}
-
-/**
  * @brief  处理闪烁逻辑
  */
 static void handle_blink(void)
@@ -364,7 +355,7 @@ void TEMP_SETTING_Handler(void)
     handle_add_key();
     handle_sub_key();
     handle_shift_key();
-    handle_reset_key();
+    /* handle_reset_key();  -- 复位键已在 TEMP_Alarm_Handler 中处理 */
     handle_blink();
 }
 

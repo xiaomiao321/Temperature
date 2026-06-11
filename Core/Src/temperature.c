@@ -27,9 +27,10 @@ uint8_t temp_valid[TEMP_CHANNEL_NUM] = {0};  /* 1=有效，0=传感器故障 */
 uint8_t temp_alarm = 0;           /* 1=有通道超温，0=正常 */
 uint8_t temp_alarm_latched = 0;   /* 警报锁定标志 - 按下复位键前保持警报 */
 uint8_t manual_alarm = 0;         /* 手动报警标志 */
-uint8_t blue_led_flash = 0;       /* 蓝灯闪烁标志（接收到有效数据时闪一下） */
-uint32_t blue_flash_time = 0;     /* 蓝灯闪烁时间记录 */
+uint8_t blue_led_flash = 0;       /* 蓝灯闪烁标志（心跳指示） */
 uint32_t last_temp_time = 0;      /* 上次接收到温度数据的时间 */
+uint32_t blue_flash_end_time = 0; /* 蓝灯闪烁结束时间 */
+uint16_t temp_data_count = 0;     /* 温度数据接收计数器（用于心跳指示） */
 
 /**
  * @brief 解析 Modbus 0x04 命令返回的温度数据
@@ -108,9 +109,13 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
     }
     temp_alarm = alarm_flag;  /* 当前超温状态 */
 
-    /* 接收到有效数据，蓝灯闪一下 */
-    blue_led_flash = 1;
-    blue_flash_time = HAL_GetTick();  /* 记录闪烁开始时间 */
+    /* 心跳指示：每 3 次数据闪一次 */
+    temp_data_count++;
+    if (temp_data_count >= 3)
+    {
+        temp_data_count = 0;
+        blue_led_flash = 1;
+    }
     last_temp_time = HAL_GetTick();   /* 记录接收时间 */
 
     return 0;  /* 解析成功 */
@@ -204,16 +209,15 @@ void TEMP_Alarm_Handler(void)
     /* === 蓝灯控制 - 长灭，收到数据闪一下 === */
     if (blue_led_flash)
     {
-        uint32_t elapsed = HAL_GetTick() - blue_flash_time;
-        if (elapsed >= 50)  /* 亮 50ms 后熄灭 */
-        {
-            blue_led_flash = 0;
-            HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, GPIO_PIN_RESET);
-        }
-        else
-        {
-            HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, GPIO_PIN_SET); /* 蓝灯亮 */
-        }
+        /* 刚收到数据，点亮蓝灯 */
+        HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, GPIO_PIN_SET);
+        blue_flash_end_time = HAL_GetTick() + 30;  /* 亮 30ms */
+        blue_led_flash = 0;  /* 清除标志，下次进入 else 分支 */
+    }
+    else if (HAL_GetTick() < blue_flash_end_time)
+    {
+        /* 保持点亮直到时间到 */
+        HAL_GPIO_WritePin(LED_Blue_GPIO_Port, LED_Blue_Pin, GPIO_PIN_SET);
     }
     else
     {

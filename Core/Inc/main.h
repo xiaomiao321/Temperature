@@ -83,10 +83,10 @@ void Error_Handler(void);
 #define Btn1_GPIO_Port GPIOB
 #define Btn2_Pin GPIO_PIN_4
 #define Btn2_GPIO_Port GPIOB
-#define Relay_220_Pin GPIO_PIN_5
-#define Relay_220_GPIO_Port GPIOB
-#define Relay_24_Pin GPIO_PIN_6
+#define Relay_24_Pin GPIO_PIN_5
 #define Relay_24_GPIO_Port GPIOB
+#define Relay_220_Pin GPIO_PIN_6
+#define Relay_220_GPIO_Port GPIOB
 #define SDI2_Pin GPIO_PIN_7
 #define SDI2_GPIO_Port GPIOB
 #define SCLK2_Pin GPIO_PIN_8

@@ -7,6 +7,7 @@
 #include "temp_setting.h"
 #include "key.h"
 #include "hc595.h"
+#include "display.h"
 #include "main.h"
 #include "temperature.h"
 #include "stm32f1xx_hal.h"
@@ -87,18 +88,6 @@ void TEMP_SETTING_Init(void)
 {
     /* 从 Flash 加载阈值 */
     TEMP_SETTING_LoadFromFlash();
-    
-    /* 上电自检：显示测试序列 */
-    HC595_Test888();      /* 显示 888 */
-    HAL_Delay(500);
-    HC595_TestAllOff();   /* 全灭 */
-    HAL_Delay(200);
-    HC595_1_DisplayNumber(123);  /* 显示 123 */
-    HC595_2_DisplayNumber(456);  /* 第二组显示不同值 */
-    HAL_Delay(500);
-    HC595_1_DisplayNumber(30);   /* 显示默认阈值 1 */
-    HC595_2_DisplayNumber(30);   /* 显示默认阈值 2 */
-    HAL_Delay(300);
 
     g_setMode = SET_MODE_NORMAL;
     g_setPos = SET_POS_UNIT;
@@ -286,43 +275,39 @@ static void handle_blink(void)
 }
 
 /**
- * @brief  更新显示
+ * @brief  更新显示 (仅在设置编辑模式时生效)
  */
 void TEMP_SETTING_Display(void)
 {
+    if (g_setMode != SET_MODE_EDIT) return;
+
     uint8_t d1, d2, d3;  /* 百位、十位、个位 */
+    uint16_t editVal = *get_current_value_ptr();
     uint16_t val1 = g_setValue1;
     uint16_t val2 = g_setValue2;
+    uint16_t otherVal = (g_currentGroup == SET_GROUP_1) ? val2 : val1;
 
-    if (g_setMode == SET_MODE_NORMAL)
-    {
-        /* 正常模式 - 两组分别显示各自的阈值 */
-        d3 = val1 % 10; d2 = (val1 / 10) % 10; d1 = (val1 / 100) % 10;
-        HC595_1_Display3Digits(d1, d2, d3);
-        
-        d3 = val2 % 10; d2 = (val2 / 10) % 10; d1 = (val2 / 100) % 10;
+    /* 显示另一组 (正常显示) */
+    d3 = otherVal % 10; d2 = (otherVal / 10) % 10; d1 = (otherVal / 100) % 10;
+    if (g_currentGroup == SET_GROUP_1)
         HC595_2_Display3Digits(d1, d2, d3);
-    }
     else
-    {
-        /* 设置模式 - 当前设置的组闪烁，另一组正常显示 */
-        uint16_t editVal = *get_current_value_ptr();
-        uint16_t otherVal = (g_currentGroup == SET_GROUP_1) ? val2 : val1;
-        
-        /* 显示另一组 (正常显示) */
-        d3 = otherVal % 10; d2 = (otherVal / 10) % 10; d1 = (otherVal / 100) % 10;
-        if (g_currentGroup == SET_GROUP_1)
-            HC595_2_Display3Digits(d1, d2, d3);
-        else
-            HC595_1_Display3Digits(d1, d2, d3);
-        
-        /* 显示当前设置组 (带闪烁) */
-        d3 = editVal % 10; d2 = (editVal / 10) % 10; d1 = (editVal / 100) % 10;
-        if (g_currentGroup == SET_GROUP_1)
-            HC595_1_Display3DigitsWithBlink(d1, d2, d3, (uint8_t)g_setPos, g_blinkState);
-        else
-            HC595_2_Display3DigitsWithBlink(d1, d2, d3, (uint8_t)g_setPos, g_blinkState);
-    }
+        HC595_1_Display3Digits(d1, d2, d3);
+
+    /* 显示当前设置组 (带闪烁) */
+    d3 = editVal % 10; d2 = (editVal / 10) % 10; d1 = (editVal / 100) % 10;
+    if (g_currentGroup == SET_GROUP_1)
+        HC595_1_Display3DigitsWithBlink(d1, d2, d3, (uint8_t)g_setPos, g_blinkState);
+    else
+        HC595_2_Display3DigitsWithBlink(d1, d2, d3, (uint8_t)g_setPos, g_blinkState);
+}
+
+/**
+ * @brief  获取当前设置模式
+ */
+SetMode_t TEMP_SETTING_GetMode(void)
+{
+    return g_setMode;
 }
 
 /**

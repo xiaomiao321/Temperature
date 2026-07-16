@@ -13,6 +13,7 @@ extern float temperature[8];
 extern uint8_t temp_valid[8];
 extern uint8_t temp_alarm;
 extern uint8_t temp_alarm_latched;  /* 警报锁定标志 */
+extern uint8_t manual_alarm;        /* 手动报警标志 */
 
 /* 函数声明 */
 uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len);

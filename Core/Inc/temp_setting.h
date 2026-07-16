@@ -39,6 +39,7 @@ void TEMP_SETTING_Init(void);
 void TEMP_SETTING_Handler(void);  /* 按键处理 */
 uint16_t TEMP_SETTING_GetValue1(void);  /* 获取第一组设置值 */
 uint16_t TEMP_SETTING_GetValue2(void);  /* 获取第二组设置值 */
+SetMode_t TEMP_SETTING_GetMode(void);   /* 获取当前设置模式 */
 void TEMP_SETTING_Display(void);  /* 更新显示 */
 SetGroup_t TEMP_SETTING_GetCurrentGroup(void);  /* 获取当前设置的组 */
 

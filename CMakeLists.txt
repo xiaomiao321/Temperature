@@ -48,6 +48,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Lib/MultiButton/multi_button.c
     Core/Src/hc595.c
     Core/Src/key.c
+    Core/Src/display.c
     Core/Src/temp_setting.c
     Core/Src/temperature.c
 )

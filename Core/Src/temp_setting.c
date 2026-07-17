@@ -5,6 +5,7 @@
  */
 
 #include "temp_setting.h"
+#include "board_config.h"
 #include "key.h"
 #include "hc595.h"
 #include "display.h"
@@ -21,8 +22,8 @@
 static SetMode_t g_setMode = SET_MODE_NORMAL;     /* 当前模式 */
 static SetPos_t g_setPos = SET_POS_UNIT;          /* 当前设置位 */
 static SetGroup_t g_currentGroup = SET_GROUP_1;   /* 当前设置的组 */
-static uint16_t g_setValue1 = 30;                 /* 第一组设置值 (默认 30℃) */
-static uint16_t g_setValue2 = 30;                 /* 第二组设置值 (默认 30℃) */
+static uint16_t g_setValue1 = TEMP_TH1_DEFAULT;   /* 第一组设置值 (出厂默认, 见 board_config.h) */
+static uint16_t g_setValue2 = TEMP_TH2_DEFAULT;   /* 第二组设置值 (出厂默认, 见 board_config.h) */
 static uint8_t g_blinkState = 1;                  /* 闪烁状态 (1-亮，0-灭) */
 static uint32_t g_lastBlinkTime = 0;              /* 上次闪烁时间 */
 static uint32_t g_setPressTime = 0;               /* SET 键按下时间 */
@@ -44,7 +45,7 @@ static void TEMP_SETTING_LoadFromFlash(void)
         if (val1 <= 999) g_setValue1 = val1;
         if (val2 <= 999) g_setValue2 = val2;
     }
-    /* 否则使用默认值 30 */
+    /* 否则保持出厂默认值 TEMP_THx_DEFAULT */
 }
 
 /**

@@ -25,6 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "board_config.h"
 #include "hc595.h"
 #include "key.h"
 #include "display.h"
@@ -86,25 +87,49 @@ uint16_t g_temp_threshold2 = 30; /* 第二组阈值 (CH5-CH8) */
 extern float temperature[8];
 extern uint8_t temp_valid[8];
 
-/* 格式化输出温度到 UART1 */
+/* 外部报警状态 (定义在 temperature.c) */
+extern uint8_t temp_alarm_latched;
+extern uint8_t manual_alarm;
+
+/* 格式化输出调试信息到 UART1 (现场用电脑查看)
+ * 格式: t=秒.毫秒 T1..T8=温度 TH1/TH2=阈值 ALM=报警 K=K1K2K3K4实际电平
+ * 每收到一帧温度数据打印一次; 时间戳便于做升温/响应时间测试。 */
 void Print_Temperature(void) {
-  char buf[128];
+  char buf[192];
   int len = 0;
 
-  len += sprintf(&buf[len], "Temp: ");
+  /* 时间戳: 开机秒数 (秒.毫秒) */
+  uint32_t ms = HAL_GetTick();
+  len += sprintf(&buf[len], "t=%lu.%03lu ", (unsigned long)(ms / 1000),
+                 (unsigned long)(ms % 1000));
+
+  /* 8 路温度: 有效输出 x.x, 故障输出 ERR (整数方式, 避免浮点 printf) */
   for (int i = 0; i < 8; i++) {
     if (temp_valid[i]) {
-      /* 使用整数方式输出温度，避免浮点 printf 问题 */
       int temp_int = (int)temperature[i];
       int temp_frac = (int)((temperature[i] - temp_int) * 10);
       if (temp_frac < 0)
         temp_frac = -temp_frac;
-      len += sprintf(&buf[len], "CH%d=%d.%d ", i + 1, temp_int, temp_frac);
+      len += sprintf(&buf[len], "T%d=%d.%d ", i + 1, temp_int, temp_frac);
     } else {
-      len += sprintf(&buf[len], "CH%d=ERR ", i + 1);
+      len += sprintf(&buf[len], "T%d=ERR ", i + 1);
     }
   }
-  len += sprintf(&buf[len], "\r\n");
+
+  /* 阈值: TH1 用于 CH1-CH7, TH2 用于 CH8 */
+  len += sprintf(&buf[len], "TH1=%u TH2=%u ", (unsigned)g_temp_threshold1,
+                 (unsigned)g_temp_threshold2);
+
+  /* 综合报警状态 (与继电器输出一致) */
+  unsigned alm = (manual_alarm || temp_alarm_latched) ? 1u : 0u;
+  len += sprintf(&buf[len], "ALM=%u ", alm);
+
+  /* 继电器实际输出电平 K1 K2 K3 K4 (1=吸合) */
+  unsigned k1 = HAL_GPIO_ReadPin(K1_ALARM_Port, K1_ALARM_Pin);
+  unsigned k2 = HAL_GPIO_ReadPin(K2_FAN_Port, K2_FAN_Pin);
+  unsigned k3 = HAL_GPIO_ReadPin(K3_GAS_Port, K3_GAS_Pin);
+  unsigned k4 = HAL_GPIO_ReadPin(K4_DAMPER_Port, K4_DAMPER_Pin);
+  len += sprintf(&buf[len], "K=%u%u%u%u\r\n", k1, k2, k3, k4);
 
   HAL_UART_Transmit(&huart1, (uint8_t *)buf, len, 100);
 }
@@ -162,11 +187,15 @@ int main(void)
   TEMP_SETTING_Init();  /* 从 Flash 加载阈值 */
   Display_Init();       /* 上电自检 */
 
-  /* 上电初始化继电器状态：默认正常状态（照明灯开，蜂鸣器关） */
-  HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin,
-                    GPIO_PIN_RESET); /* 24V 蜂鸣器关闭 */
-  HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin,
-                    GPIO_PIN_SET); /* 220V 照明灯开启 */
+  /* 上电初始化继电器状态：正常态 = 全部继电器释放
+   * (K1~K3 断开; K4 防火阀释放 = 走开阀线, 阀保持开) */
+  HAL_GPIO_WritePin(K1_ALARM_Port, K1_ALARM_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(K2_FAN_Port, K2_FAN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(K3_GAS_Port, K3_GAS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(K4_DAMPER_Port, K4_DAMPER_Pin, GPIO_PIN_RESET);
+#if (DAMPER_HAS_LIMIT_SWITCH == 0)
+  HAL_GPIO_WritePin(K5_DAMPER2_Port, K5_DAMPER2_Pin, GPIO_PIN_RESET);
+#endif
 
   /* 启动 UART2 DMA 空闲中断接收 */
   huart2.Instance->CR1 |= USART_CR1_IDLEIE; /* 使能 IDLE 中断 */

@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "main.h"
+#include "board_config.h"
 
 /* 温度数据 */
 #define TEMP_CHANNEL_NUM    8
@@ -23,8 +24,8 @@ extern uint8_t key_manual_pressed;  /* 手动键标志 */
 float temperature[TEMP_CHANNEL_NUM] = {0};
 uint8_t temp_valid[TEMP_CHANNEL_NUM] = {0};  /* 1=有效，0=传感器故障 */
 
-/* 报警冷却时间（毫秒）- 复位后在此时间内不触发新报警 */
-#define ALARM_COOLDOWN_TIME  (3 * 60 * 1000UL)  /* 默认 3 分钟，可根据需要修改 */
+/* 报警冷却时间（毫秒）- 复位后在此时间内不触发新报警, 集中在 board_config.h 配置 */
+#define ALARM_COOLDOWN_TIME  ALARM_COOLDOWN_MS
 
 /* 温度告警标志 */
 uint8_t temp_alarm = 0;           /* 1=有通道超温，0=正常 */
@@ -132,6 +133,75 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
     return 0;  /* 解析成功 */
 }
 
+/* ===== K4 防火阀状态机 =====
+ * 正常: K4 释放(开阀线, 阀保持开) / 报警: K4 吸合(关阀线, 阀关) / 复位: 释放回开阀。
+ * 单/双路方案由 board_config.h 的 DAMPER_HAS_LIMIT_SWITCH 切换。
+ */
+typedef enum {
+    DAMPER_OPEN = 0,       /* 正常态: 阀开 */
+#if (DAMPER_HAS_LIMIT_SWITCH == 0)
+    DAMPER_CLOSING,        /* 双路: 关阀电机通电中(定时) */
+    DAMPER_OPENING,        /* 双路: 开阀电机通电中(定时) */
+#endif
+    DAMPER_CLOSED          /* 报警态: 阀关 */
+} DamperState_t;
+
+static DamperState_t g_damperState = DAMPER_OPEN;
+#if (DAMPER_HAS_LIMIT_SWITCH == 0)
+static uint32_t g_damperMoveEnd = 0;   /* 电机定时释放时刻 */
+#endif
+
+/**
+ * @brief  K4 防火阀驱动 (每次主循环调用)
+ * @param  alarm_active: 1=报警(关阀), 0=正常(开阀)
+ */
+static void Damper_Handler(uint8_t alarm_active)
+{
+#if (DAMPER_HAS_LIMIT_SWITCH == 1)
+    /* ---- 单路: 执行器带内置限位, 吸合=关阀保持, 释放=开阀, 限位自停 ---- */
+    if (alarm_active) {
+        g_damperState = DAMPER_CLOSED;
+        HAL_GPIO_WritePin(K4_DAMPER_Port, K4_DAMPER_Pin, GPIO_PIN_SET);   /* 关阀线 */
+    } else {
+        g_damperState = DAMPER_OPEN;
+        HAL_GPIO_WritePin(K4_DAMPER_Port, K4_DAMPER_Pin, GPIO_PIN_RESET); /* 开阀线 */
+    }
+#else
+    /* ---- 双路: 无限位, 通电到位后按行程时间定时切断, 防电机堵转 ---- */
+    switch (g_damperState) {
+        case DAMPER_OPEN:
+            if (alarm_active) {                       /* 开 -> 关 */
+                g_damperState = DAMPER_CLOSING;
+                g_damperMoveEnd = HAL_GetTick() + DAMPER_TRAVEL_MS;
+                HAL_GPIO_WritePin(K5_DAMPER2_Port, K5_DAMPER2_Pin, GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(K4_DAMPER_Port,  K4_DAMPER_Pin,  GPIO_PIN_SET);
+            }
+            break;
+        case DAMPER_CLOSING:
+            if (HAL_GetTick() >= g_damperMoveEnd) {   /* 关阀到位, 停机 */
+                g_damperState = DAMPER_CLOSED;
+                HAL_GPIO_WritePin(K4_DAMPER_Port, K4_DAMPER_Pin, GPIO_PIN_RESET);
+            }
+            break;
+        case DAMPER_CLOSED:
+            if (!alarm_active) {                      /* 关 -> 开 (复位) */
+                g_damperState = DAMPER_OPENING;
+                g_damperMoveEnd = HAL_GetTick() + DAMPER_TRAVEL_MS;
+                HAL_GPIO_WritePin(K4_DAMPER_Port,  K4_DAMPER_Pin,  GPIO_PIN_RESET);
+                HAL_GPIO_WritePin(K5_DAMPER2_Port, K5_DAMPER2_Pin, GPIO_PIN_SET);
+            }
+            break;
+        case DAMPER_OPENING:
+            if (HAL_GetTick() >= g_damperMoveEnd) {   /* 开阀到位, 停机 */
+                g_damperState = DAMPER_OPEN;
+                HAL_GPIO_WritePin(K5_DAMPER2_Port, K5_DAMPER2_Pin, GPIO_PIN_RESET);
+            }
+            break;
+        default: break;
+    }
+#endif
+}
+
 /**
  * @brief  处理警报逻辑（包括手动按钮、温度报警、复位、LED）
  *         在主循环中调用
@@ -157,19 +227,16 @@ void TEMP_Alarm_Handler(void)
     /* 综合报警条件：手动报警 或 温度报警锁定 */
     uint8_t alarm_active = manual_alarm || temp_alarm_latched;
 
-    /* 控制继电器 */
-    if (alarm_active)
-    {
-        /* 报警状态：24V 导通（蜂鸣器响），220V 关断（照明灯灭） */
-        HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_RESET);
-    }
-    else
-    {
-        /* 正常状态：24V 关断（蜂鸣器关），220V 导通（照明灯开） */
-        HAL_GPIO_WritePin(Relay_24_GPIO_Port, Relay_24_Pin, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(Relay_220_GPIO_Port, Relay_220_Pin, GPIO_PIN_SET);
-    }
+    /* ===== 继电器输出 ===== */
+    /* K1 警报 / K2 风机 / K3 断气阀: 报警统一吸合, 正常释放
+     * (常开/常闭由客户接线决定, 程序一律"报警=吸合") */
+    GPIO_PinState k123 = alarm_active ? GPIO_PIN_SET : GPIO_PIN_RESET;
+    HAL_GPIO_WritePin(K1_ALARM_Port, K1_ALARM_Pin, k123);
+    HAL_GPIO_WritePin(K2_FAN_Port,   K2_FAN_Pin,   k123);
+    HAL_GPIO_WritePin(K3_GAS_Port,   K3_GAS_Pin,   k123);
+
+    /* K4 防火阀: 独立状态机 (复位时 alarm_active=0, 自动切回开阀) */
+    Damper_Handler(alarm_active);
 
     /* 控制 LED 指示灯 */
     

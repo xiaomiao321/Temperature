@@ -8,6 +8,7 @@
 #include "hc595.h"
 #include "temperature.h"
 #include "temp_setting.h"
+#include "iwdg.h"          /* 上电自检期间喂狗, 见 Display_Init */
 #include "stm32f1xx_hal.h"
 
 /* ========== 全局变量 ========== */
@@ -155,23 +156,30 @@ static void UpdateAlarmChannels(void)
  */
 void Display_Init(void)
 {
-    /* 自检序列: 888/888 500ms → 灭/灭 200ms → 123/456 500ms → 灭/灭 200ms → 030/030 300ms */
+    /* 自检序列: 888/888 500ms → 灭/灭 200ms → 123/456 500ms → 灭/灭 200ms → 030/030 300ms
+     * 注意: 看门狗在 MX_IWDG_Init() 已启动(超时约 1.6s), 而本自检总长 1.7s,
+     *       故每步 HAL_Delay 后必须喂狗, 否则会在自检末尾被复位(上电死循环)。 */
     HC595_Test888();
     HAL_Delay(500);
+    __HAL_IWDG_RELOAD_COUNTER(&hiwdg);
 
     HC595_TestAllOff();
     HAL_Delay(200);
+    __HAL_IWDG_RELOAD_COUNTER(&hiwdg);
 
     HC595_1_DisplayNumber(123);
     HC595_2_DisplayNumber(456);
     HAL_Delay(500);
+    __HAL_IWDG_RELOAD_COUNTER(&hiwdg);
 
     HC595_TestAllOff();
     HAL_Delay(200);
+    __HAL_IWDG_RELOAD_COUNTER(&hiwdg);
 
     HC595_1_DisplayNumber(30);
     HC595_2_DisplayNumber(30);
     HAL_Delay(300);
+    __HAL_IWDG_RELOAD_COUNTER(&hiwdg);
 
     /* 初始化状态 */
     g_dispMode = DISP_MODE_ROTATION;

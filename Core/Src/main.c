@@ -93,7 +93,7 @@ extern uint8_t manual_alarm;
 
 /* 格式化输出调试信息到 UART1 (现场用电脑查看)
  * 格式: t=秒.毫秒 T1..T8=温度 TH1/TH2=阈值 ALM=报警 K=K1K2K3K4实际电平
- * 每收到一帧温度数据打印一次; 时间戳便于做升温/响应时间测试。 */
+ * 主循环每 1s 定时调用一次; 时间戳便于做升温/响应时间测试。 */
 void Print_Temperature(void) {
   char buf[192];
   int len = 0;
@@ -134,6 +134,21 @@ void Print_Temperature(void) {
   HAL_UART_Transmit(&huart1, (uint8_t *)buf, len, 100);
 }
 
+/* 开机 banner: 上电/复位后打印一次, 现场插上串口即可确认程序在跑。
+ * __DATE__/__TIME__ 为编译时间戳, 便于核对烧录的是哪一版固件。 */
+void Print_Banner(void) {
+  char buf[256];
+  int len = sprintf(buf,
+      "\r\n==============================\r\n"
+      " 8CH PT100 Temp Monitor (Delivery)\r\n"
+      " Build : %s %s\r\n"
+      " Debug : UART1 @115200 8N1\r\n"
+      " Relay : K1=Alarm K2=Fan K3=Gas K4=Damper\r\n"
+      "==============================\r\n",
+      __DATE__, __TIME__);
+  HAL_UART_Transmit(&huart1, (uint8_t *)buf, len, 100);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -144,7 +159,7 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+  uint32_t lastPrintTick = 0;   /* 上次串口日志打印时刻, 用于 1s 定时打印 */
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -197,6 +212,9 @@ int main(void)
   HAL_GPIO_WritePin(K5_DAMPER2_Port, K5_DAMPER2_Pin, GPIO_PIN_RESET);
 #endif
 
+  /* 打印开机 banner (UART1 已初始化, 现场插串口即可确认程序在跑) */
+  Print_Banner();
+
   /* 启动 UART2 DMA 空闲中断接收 */
   huart2.Instance->CR1 |= USART_CR1_IDLEIE; /* 使能 IDLE 中断 */
 
@@ -235,16 +253,21 @@ int main(void)
     g_temp_threshold1 = TEMP_SETTING_GetValue1();
     g_temp_threshold2 = TEMP_SETTING_GetValue2();
 
-    /* 处理 UART2 接收到的数据 */
+    /* 处理 UART2 接收到的数据: 只解析更新温度, 打印与收帧解耦 */
     if (uart2_frame_ready) {
       uart2_frame_ready = 0; /* 清除标志 */
 
-      /* 解析温度数据 */
       if (uart2_rx_len >= 21) {
-        if (Parse_Temperature_Data(uart2_rx_buf, uart2_rx_len) == 0) {
-          Print_Temperature();
-        }
+        Parse_Temperature_Data(uart2_rx_buf, uart2_rx_len);
       }
+    }
+
+    /* 每 1s 定时打印一次调试日志到 UART1
+     * (不依赖温度帧: 没接温度模块也照打, 无效通道显示 ERR,
+     *  现场插上串口即可确认 MCU 在跑) */
+    if (HAL_GetTick() - lastPrintTick >= 1000) {
+      lastPrintTick = HAL_GetTick();
+      Print_Temperature();
     }
 
     /* 喂狗 */

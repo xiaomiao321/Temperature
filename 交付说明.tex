@@ -580,33 +580,37 @@ t=123.456 T1=25.3 T2=26.1 \dots{} T8=ERR TH1=100 TH2=100 ALM=0 MAN=0 LAT=0 BM=0 
 \section{程序结构说明}
 本节面向开发与维护。
 \subsection{目录与模块}
+应用代码按四层组织，依赖只自上而下：应用层 main.c 只做初始化与主循环调度；业务层放在
+\texttt{App/logic}，只处理逻辑，碰硬件一律走驱动；驱动层放在 \texttt{App/driver}，把外设包成
+干净接口；底层是 board\_config.h 引脚语义加 CubeMX 生成的 BSP 与 STM32 HAL。CubeMX 再生成
+只动 \texttt{Core}，不会碰到 \texttt{App} 下的应用代码。
 \renewcommand{\arraystretch}{1.25}
 \begin{center}
-\begin{tabular}{|l|L{9.0cm}|}
+\begin{tabular}{|c|l|L{7.0cm}|}
 \hline
-文件 & 职责\\
+层 & 文件 & 职责\\
 \hline
-\texttt{Core/Inc/board\_config.h} & 单一事实来源：继电器功能映射、阈值默认、抑制期、防火阀方案\\
+应用 & \texttt{Core/Src/main.c} & 初始化、主循环调度、外设启动\\
 \hline
-\texttt{Core/Inc/main.h} & CubeMX 生成的原始引脚标签，如 Relay\_24、Relay3\\
+业务 & \texttt{App/logic/temperature.c} & 温度帧解析、报警处理含继电器与 LED、防火阀状态机、通道到阈值分组\\
 \hline
-\texttt{Core/Src/main.c} & 初始化、主循环、外设启动\\
+业务 & \texttt{App/logic/temp\_setting.c} & 阈值设置状态机、Flash 读写，用最后 1KB 页\\
 \hline
-\texttt{Core/Src/report.c} & 串口调试输出 \texttt{Report\_Banner} 与 \texttt{Report\_Temperature}\\
+业务 & \texttt{App/logic/display.c} & 轮显、报警、设置三模式显示管理\\
 \hline
-\texttt{Core/Src/temperature.c} & 温度解析、报警处理含继电器与 LED、防火阀状态机、通道到阈值分组\\
+业务 & \texttt{App/logic/report.c} & 串口调试输出 \texttt{Report\_Banner} 与 \texttt{Report\_Temperature}\\
 \hline
-\texttt{Core/Src/temp\_setting.c} & 阈值设置状态机、Flash 读写，用最后 1KB 页\\
+驱动 & \texttt{App/driver/hc595.c} & 74HC595 位操作、段码表 \texttt{SEG\_CODE[]}\\
 \hline
-\texttt{Core/Src/display.c} & 轮显、报警、设置三模式显示管理\\
+驱动 & \texttt{App/driver/key.c} & MultiButton 按键，6 键，设置 4 键低有效、手动与复位高有效\\
 \hline
-\texttt{Core/Src/hc595.c} & 74HC595 位操作、段码表 \texttt{SEG\_CODE[]}\\
+BSP & \texttt{Core/Inc/board\_config.h} & 单一事实来源：继电器功能映射、阈值默认、抑制期、防火阀方案\\
 \hline
-\texttt{Core/Src/key.c} & MultiButton 按键，6 键，设置 4 键低有效、手动与复位高有效\\
+BSP & \texttt{Core/Inc/main.h} & CubeMX 生成的原始引脚标签，如 Relay\_24、Relay3\\
 \hline
-\texttt{gpio/usart/dma/iwdg.c} & CubeMX 外设初始化\\
+BSP & \texttt{gpio/usart/dma/iwdg.c} & CubeMX 外设初始化\\
 \hline
-\texttt{stm32f1xx\_it.c} & 中断，含 UART2 IDLE 收帧\\
+BSP & \texttt{stm32f1xx\_it.c} & 中断，含 UART2 IDLE 收帧\\
 \hline
 \end{tabular}
 \end{center}

@@ -31,7 +31,7 @@
 #include "display.h"
 #include "temp_setting.h"
 #include "temperature.h"
-#include <stdio.h>
+#include "report.h"
 
 /* USER CODE END Includes */
 
@@ -70,93 +70,14 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-/* 外部变量声明 */
-extern uint8_t uart2_dma_buf[];
-extern uint8_t uart2_rx_buf[];
-extern volatile uint16_t uart2_rx_len;
-extern volatile uint8_t uart2_frame_ready;
+/* UART2 收帧缓冲 uart2_* 定义在上方 PV 段;
+ * DMA 句柄定义在 dma.c (dma.h 未导出, 故此处 extern)。 */
 extern DMA_HandleTypeDef hdma_usart2_rx;
 
-#define UART2_BUF_SIZE 64
-
-/* 格式化输出温度到 UART1 */
-/* 运行期阈值: 每轮主循环由 TEMP_SETTING_GetValue1/2() 覆盖(Flash 值或出厂默认),
- * 此处初值仅占位。分组: 阈值1=CH1~CH7, 阈值2=CH8 (见 temperature.c / board_config.h)。 */
-uint16_t g_temp_threshold1 = 30; /* 第一组阈值 (CH1-CH7) */
-uint16_t g_temp_threshold2 = 30; /* 第二组阈值 (CH8)     */
-
-/* 外部温度变量声明 */
-extern float temperature[8];
-extern uint8_t temp_valid[8];
-
-/* 外部报警状态 (定义在 temperature.c) */
-extern uint8_t temp_alarm_latched;
-extern uint8_t manual_alarm;
-
-/* 格式化输出调试信息到 UART1 (现场用电脑查看)
- * 格式: t=秒.毫秒 T1..T8=温度 TH1/TH2=阈值 ALM=报警 K=K1K2K3K4实际电平
- * 主循环每 1s 定时调用一次; 时间戳便于做升温/响应时间测试。 */
-void Print_Temperature(void) {
-  char buf[224];
-  int len = 0;
-
-  /* 时间戳: 开机秒数 (秒.毫秒) */
-  uint32_t ms = HAL_GetTick();
-  len += sprintf(&buf[len], "t=%lu.%03lu ", (unsigned long)(ms / 1000),
-                 (unsigned long)(ms % 1000));
-
-  /* 8 路温度: 有效输出 x.x, 故障输出 ERR (整数方式, 避免浮点 printf) */
-  for (int i = 0; i < 8; i++) {
-    if (temp_valid[i]) {
-      int temp_int = (int)temperature[i];
-      int temp_frac = (int)((temperature[i] - temp_int) * 10);
-      if (temp_frac < 0)
-        temp_frac = -temp_frac;
-      len += sprintf(&buf[len], "T%d=%d.%d ", i + 1, temp_int, temp_frac);
-    } else {
-      len += sprintf(&buf[len], "T%d=ERR ", i + 1);
-    }
-  }
-
-  /* 阈值: TH1 用于 CH1-CH7, TH2 用于 CH8 */
-  len += sprintf(&buf[len], "TH1=%u TH2=%u ", (unsigned)g_temp_threshold1,
-                 (unsigned)g_temp_threshold2);
-
-  /* 综合报警状态 (与继电器输出一致) */
-  unsigned alm = (manual_alarm || temp_alarm_latched) ? 1u : 0u;
-  len += sprintf(&buf[len], "ALM=%u ", alm);
-
-  /* 按键调试: MAN=手动报警标志 LAT=温度锁定; BM/BR=手动(PA12)/复位(PA15)引脚原始电平
-   * 按住手动键看 BM 是否变化: 若一直=1 说明 1.93V 被读成高, 引脚从不翻转 => 按键无效 */
-  unsigned bm = HAL_GPIO_ReadPin(Manual_Btn_GPIO_Port, Manual_Btn_Pin);
-  unsigned br = HAL_GPIO_ReadPin(Reset_Btn_GPIO_Port, Reset_Btn_Pin);
-  len += sprintf(&buf[len], "MAN=%u LAT=%u BM=%u BR=%u ", (unsigned)manual_alarm,
-                 (unsigned)temp_alarm_latched, bm, br);
-
-  /* 继电器实际输出电平 K1 K2 K3 K4 (1=吸合) */
-  unsigned k1 = HAL_GPIO_ReadPin(K1_ALARM_Port, K1_ALARM_Pin);
-  unsigned k2 = HAL_GPIO_ReadPin(K2_FAN_Port, K2_FAN_Pin);
-  unsigned k3 = HAL_GPIO_ReadPin(K3_GAS_Port, K3_GAS_Pin);
-  unsigned k4 = HAL_GPIO_ReadPin(K4_DAMPER_Port, K4_DAMPER_Pin);
-  len += sprintf(&buf[len], "K=%u%u%u%u\r\n", k1, k2, k3, k4);
-
-  HAL_UART_Transmit(&huart1, (uint8_t *)buf, len, 100);
-}
-
-/* 开机 banner: 上电/复位后打印一次, 现场插上串口即可确认程序在跑。
- * __DATE__/__TIME__ 为编译时间戳, 便于核对烧录的是哪一版固件。 */
-void Print_Banner(void) {
-  char buf[256];
-  int len = sprintf(buf,
-      "\r\n==============================\r\n"
-      " 8CH PT100 Temp Monitor (Delivery)\r\n"
-      " Build : %s %s\r\n"
-      " Debug : UART1 @115200 8N1\r\n"
-      " Relay : K1=Alarm K2=Fan K3=Gas K4=Damper\r\n"
-      "==============================\r\n",
-      __DATE__, __TIME__);
-  HAL_UART_Transmit(&huart1, (uint8_t *)buf, len, 100);
-}
+/* 温度/报警/阈值/串口输出均由各模块提供, 不再在本文件重复 extern 或定义:
+ *   temperature[] / temp_valid[] / manual_alarm / temp_alarm_latched -> temperature.h
+ *   阈值 -> temp_setting.h 的 TEMP_SETTING_GetValue1/2()
+ *   串口 -> report.h 的 Report_Banner() / Report_Temperature() */
 
 /* USER CODE END 0 */
 
@@ -222,7 +143,7 @@ int main(void)
 #endif
 
   /* 打印开机 banner (UART1 已初始化, 现场插串口即可确认程序在跑) */
-  Print_Banner();
+  Report_Banner();
 
   /* 启动 UART2 DMA 空闲中断接收 */
   huart2.Instance->CR1 |= USART_CR1_IDLEIE; /* 使能 IDLE 中断 */
@@ -262,10 +183,6 @@ int main(void)
     /* 处理警报逻辑 (手动按钮/复位/LED) */
     TEMP_Alarm_Handler();
 
-    /* 更新阈值到全局变量 */
-    g_temp_threshold1 = TEMP_SETTING_GetValue1();
-    g_temp_threshold2 = TEMP_SETTING_GetValue2();
-
     /* 处理 UART2 接收到的数据: 只解析更新温度, 打印与收帧解耦 */
     if (uart2_frame_ready) {
       uart2_frame_ready = 0; /* 清除标志 */
@@ -280,7 +197,7 @@ int main(void)
      *  现场插上串口即可确认 MCU 在跑) */
     if (HAL_GetTick() - lastPrintTick >= 1000) {
       lastPrintTick = HAL_GetTick();
-      Print_Temperature();
+      Report_Temperature();
     }
 
     /* 喂狗 */

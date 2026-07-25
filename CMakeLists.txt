@@ -51,6 +51,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/display.c
     Core/Src/temp_setting.c
     Core/Src/temperature.c
+    Core/Src/report.c
 )
 
 # Add include paths

@@ -8,18 +8,12 @@
 #include <string.h>
 #include "main.h"
 #include "board_config.h"
+#include "temp_setting.h"   /* 阈值取值 TEMP_SETTING_GetValue1/2() */
+#include "key.h"            /* 按键标志 key_reset_pressed / key_manual_pressed */
 
 /* 温度数据 */
 #define TEMP_CHANNEL_NUM    8
 #define TEMP_SENSOR_FAULT   -5000   /* 传感器故障特殊值 */
-
-/* 外部阈值变量 (在 main.c 中设置) */
-extern uint16_t g_temp_threshold1;  /* 第一组阈值 (CH1-CH4) */
-extern uint16_t g_temp_threshold2;  /* 第二组阈值 (CH5-CH8) */
-
-/* 外部按键状态 */
-extern uint8_t key_reset_pressed;   /* 复位键标志 */
-extern uint8_t key_manual_pressed;  /* 手动键标志 */
 
 float temperature[TEMP_CHANNEL_NUM] = {0};
 uint8_t temp_valid[TEMP_CHANNEL_NUM] = {0};  /* 1=有效，0=传感器故障 */
@@ -36,6 +30,15 @@ uint32_t last_temp_time = 0;      /* 上次接收到温度数据的时间 */
 uint32_t blue_flash_end_time = 0; /* 蓝灯闪烁结束时间 */
 uint16_t temp_data_count = 0;     /* 温度数据接收计数器（用于心跳指示） */
 uint32_t alarm_cooldown_end_time = 0;  /* 报警冷却结束时间 */
+
+/**
+ * @brief  返回某通道当前适用的阈值
+ * @note   CH8(索引7) 用阈值2, 其余用阈值1; 通道→阈值分组集中在此一处。
+ */
+uint16_t TEMP_ThresholdForChannel(uint8_t channel)
+{
+    return (channel == 7) ? TEMP_SETTING_GetValue2() : TEMP_SETTING_GetValue1();
+}
 
 /**
  * @brief 解析 Modbus 0x04 命令返回的温度数据
@@ -87,22 +90,10 @@ uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len)
             temperature[i] = (float)temp_raw / 10.0f;
             temp_valid[i] = 1;  /* 标记为有效 */
 
-            /* 检查是否超过阈值 - CH1-CH7 使用阈值 1，CH8 使用阈值 2 */
-            if (i == 7)  /* 通道 8 (索引 7) */
+            /* 超过阈值判定; 通道→阈值分组集中在 TEMP_ThresholdForChannel() */
+            if (temperature[i] >= (float)TEMP_ThresholdForChannel(i))
             {
-                /* CH8 使用第二组阈值 */
-                if (temperature[i] >= (float)g_temp_threshold2)
-                {
-                    alarm_flag = 1;
-                }
-            }
-            else
-            {
-                /* CH1-CH7 使用第一组阈值 */
-                if (temperature[i] >= (float)g_temp_threshold1)
-                {
-                    alarm_flag = 1;
-                }
+                alarm_flag = 1;
             }
         }
     }

@@ -590,9 +590,11 @@ t=123.456 T1=25.3 T2=26.1 \dots{} T8=ERR TH1=100 TH2=100 ALM=0 MAN=0 LAT=0 BM=0 
 \hline
 \texttt{Core/Inc/main.h} & CubeMX 生成的原始引脚标签，如 Relay\_24、Relay3\\
 \hline
-\texttt{Core/Src/main.c} & 初始化、主循环、串口打印 \texttt{Print\_Temperature} 与 \texttt{Print\_Banner}\\
+\texttt{Core/Src/main.c} & 初始化、主循环、外设启动\\
 \hline
-\texttt{Core/Src/temperature.c} & 温度解析、报警处理含继电器与 LED、防火阀状态机\\
+\texttt{Core/Src/report.c} & 串口调试输出 \texttt{Report\_Banner} 与 \texttt{Report\_Temperature}\\
+\hline
+\texttt{Core/Src/temperature.c} & 温度解析、报警处理含继电器与 LED、防火阀状态机、通道到阈值分组\\
 \hline
 \texttt{Core/Src/temp\_setting.c} & 阈值设置状态机、Flash 读写，用最后 1KB 页\\
 \hline
@@ -637,7 +639,7 @@ t=123.456 T1=25.3 T2=26.1 \dots{} T8=ERR TH1=100 TH2=100 ALM=0 MAN=0 LAT=0 BM=0 
   \item \texttt{TEMP\_Alarm\_Handler()} 处理手动与复位、驱动继电器与 LED。
   \item 刷新 \texttt{g\_temp\_threshold1/2}，取自设置模块。
   \item 若收到温度帧则解析，解析与打印已解耦。
-  \item 每 1s 调 \texttt{Print\_Temperature()} 打印调试日志。
+  \item 每 1s 调 \texttt{Report\_Temperature()} 打印调试日志。
   \item 喂狗，再 \texttt{HAL\_Delay(10)}。
 \end{enumerate}
 
@@ -661,7 +663,7 @@ t=123.456 T1=25.3 T2=26.1 \dots{} T8=ERR TH1=100 TH2=100 ALM=0 MAN=0 LAT=0 BM=0 
 \hline
 段码字形，某字母显示不对 & \texttt{hc595.c} \texttt{SEG\_CODE[]}\\
 \hline
-串口日志字段 & \texttt{main.c} \texttt{Print\_Temperature()}\\
+串口日志字段 & \texttt{report.c} \texttt{Report\_Temperature()}\\
 \hline
 按键有效电平，高或低 & \texttt{key.c} \texttt{button\_init} 的 active\_level 参数\\
 \hline

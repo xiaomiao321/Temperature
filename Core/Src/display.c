@@ -127,9 +127,6 @@ static uint8_t GetAlarmCount(void)
  */
 static void UpdateAlarmChannels(void)
 {
-    extern uint16_t g_temp_threshold1;
-    extern uint16_t g_temp_threshold2;
-
     for (int i = 0; i < 8; i++)
     {
         if (!temp_valid[i])
@@ -137,16 +134,8 @@ static void UpdateAlarmChannels(void)
             g_alarmChannels[i] = 0;
             continue;
         }
-
-        /* CH1-CH7 用阈值 1, CH8 用阈值 2 */
-        if (i == 7)
-        {
-            g_alarmChannels[i] = (temperature[i] >= g_temp_threshold2) ? 1 : 0;
-        }
-        else
-        {
-            g_alarmChannels[i] = (temperature[i] >= g_temp_threshold1) ? 1 : 0;
-        }
+        /* 分组集中在 TEMP_ThresholdForChannel() (temperature.c) */
+        g_alarmChannels[i] = (temperature[i] >= TEMP_ThresholdForChannel(i)) ? 1 : 0;
     }
 }
 

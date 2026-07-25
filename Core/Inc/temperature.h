@@ -17,6 +17,7 @@ extern uint8_t manual_alarm;        /* 手动报警标志 */
 
 /* 函数声明 */
 uint8_t Parse_Temperature_Data(uint8_t *buf, uint16_t len);
+uint16_t TEMP_ThresholdForChannel(uint8_t channel);  /* 通道→阈值分组: CH8 用阈值2, 余用阈值1 */
 void TEMP_Alarm_Handler(void);      /* 警报处理（手动/复位/LED） */
 float Get_Temperature(uint8_t channel);
 uint8_t Get_Temp_Valid(uint8_t channel);

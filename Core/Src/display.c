@@ -97,9 +97,10 @@ static uint8_t TempToDisplay(float temp, uint8_t *d1, uint8_t *d2, uint8_t *d3, 
     }
     else
     {
-        /* <100℃: 十位后显示小数点, 百位补 0 */
+        /* <100℃: 显示 XY.Z (整数两位 + 小数一位), 小数点在十位后。
+         * 注意: 原来这里把 *d1 硬编码成 0, 丢掉了十位 → 28.8 会显示成 08.8。 */
         int temp_frac = (int)((temp - temp_int) * 10);
-        *d1 = 0;
+        *d1 = (temp_int >= 10) ? (uint8_t)((temp_int / 10) % 10) : SEG_idx_OFF;  /* 十位; <10℃ 消隐前导零 */
         *d2 = temp_int % 10;
         *d3 = temp_frac % 10;
         *dotPos = 2;  /* 十位后 */
@@ -198,13 +199,39 @@ void Display_Init(void)
 }
 
 /**
+ * @brief  把某通道温度显示到指定组; 无有效数据(未收到/传感器故障)则显示 Err
+ * @param  group: 1=第一组, 2=第二组
+ * @param  ch:    通道 0-7
+ */
+static void ShowTempOrErr(uint8_t group, uint8_t ch)
+{
+    uint8_t d1, d2, d3, dotPos;
+
+    if (!temp_valid[ch])
+    {
+        /* 无有效数据: 显示 Err (与串口一致), 不再显示 0 */
+        d1 = SEG_idx_E;
+        d2 = SEG_idx_r;
+        d3 = SEG_idx_r;
+        dotPos = 0;
+    }
+    else
+    {
+        TempToDisplay(temperature[ch], &d1, &d2, &d3, &dotPos);
+    }
+
+    if (group == 1)
+        HC595_1_Display3DigitsWithDot(d1, d2, d3, dotPos);
+    else
+        HC595_2_Display3DigitsWithDot(d1, d2, d3, dotPos);
+}
+
+/**
  * @brief  轮询显示处理 (M0)
  */
 static void Display_Rotation_Handler(void)
 {
     uint32_t current_time = HAL_GetTick();
-    uint8_t d1, d2, d3, dotPos;
-    float temp;
 
     /* 每 1500ms 切换一步 */
     if (current_time - g_rotationTimer >= 1500)
@@ -232,15 +259,9 @@ static void Display_Rotation_Handler(void)
     }
     else
     {
-        /* 显示温度: 第一组当前通道温度 */
-        temp = temperature[g_rotationChannel];
-        TempToDisplay(temp, &d1, &d2, &d3, &dotPos);
-        HC595_1_Display3DigitsWithDot(d1, d2, d3, dotPos);
-
-        /* 第二组固定显示 CH8 温度 */
-        temp = temperature[7];
-        TempToDisplay(temp, &d1, &d2, &d3, &dotPos);
-        HC595_2_Display3DigitsWithDot(d1, d2, d3, dotPos);
+        /* 显示温度(无效则 Err): 第一组当前通道, 第二组固定 CH8 */
+        ShowTempOrErr(1, g_rotationChannel);
+        ShowTempOrErr(2, 7);
     }
 }
 
@@ -250,8 +271,6 @@ static void Display_Rotation_Handler(void)
 static void Display_Alarm_Handler(void)
 {
     uint32_t current_time = HAL_GetTick();
-    uint8_t d1, d2, d3, dotPos;
-    float temp;
     uint8_t alarm_count;
     uint8_t current_alarm_ch;
 
@@ -321,15 +340,9 @@ static void Display_Alarm_Handler(void)
         break;
 
     case 2:
-        /* 报警通道温度 */
-        temp = temperature[current_alarm_ch];
-        TempToDisplay(temp, &d1, &d2, &d3, &dotPos);
-        HC595_1_Display3DigitsWithDot(d1, d2, d3, dotPos);
-
-        /* 第二组固定显示 CH8 温度 */
-        temp = temperature[7];
-        TempToDisplay(temp, &d1, &d2, &d3, &dotPos);
-        HC595_2_Display3DigitsWithDot(d1, d2, d3, dotPos);
+        /* 报警通道温度(无效则 Err); 第二组固定 CH8 */
+        ShowTempOrErr(1, current_alarm_ch);
+        ShowTempOrErr(2, 7);
         break;
     }
 }
@@ -355,6 +368,13 @@ void Display_Handler(void)
  */
 void Display_SetMode(DispMode_t mode)
 {
+    /* 幂等: 主循环每轮都会调用本函数; 若模式未变仍复位状态,
+     * 会把轮询/报警计时器反复清零, 导致画面冻结(卡在 CH1/CH8 或 ALA)。 */
+    if (g_dispMode == mode)
+    {
+        return;
+    }
+
     g_dispMode = mode;
 
     if (mode == DISP_MODE_ROTATION)

@@ -95,7 +95,7 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin : Manual_Btn_Pin */
   GPIO_InitStruct.Pin = Manual_Btn_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;   /* 高有效按键: 内部弱下拉, 松开电平主要靠外部下拉 (与 Reset_Btn 一致) */
   HAL_GPIO_Init(Manual_Btn_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : Reset_Btn_Pin */

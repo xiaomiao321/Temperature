@@ -68,13 +68,14 @@ static void on_press_down(Button* btn, void* user_data)
  */
 void KEY_Init(void)
 {
-    /* 初始化所有按键 (低电平有效) */
+    /* 设置键 Btn1~4 (PB3/4/0/1): 低电平有效 (外部上拉, 按下接地) */
     button_init(&btn_set, KEY_ReadPin, 0, KEY_ID_SET);
     button_init(&btn_add, KEY_ReadPin, 0, KEY_ID_ADD);
     button_init(&btn_sub, KEY_ReadPin, 0, KEY_ID_SUB);
     button_init(&btn_shift, KEY_ReadPin, 0, KEY_ID_SHIFT);
-    button_init(&btn_reset, KEY_ReadPin, 0, KEY_ID_RESET);
-    button_init(&btn_manual, KEY_ReadPin, 0, KEY_ID_MANUAL);
+    /* 手动/复位键 (PA12/PA15): 高电平有效 (硬件按下接 3.3V, 外部下拉定义松开=低) */
+    button_init(&btn_reset, KEY_ReadPin, 1, KEY_ID_RESET);
+    button_init(&btn_manual, KEY_ReadPin, 1, KEY_ID_MANUAL);
 
     /* 注册按下事件回调 */
     button_attach(&btn_set, BTN_PRESS_DOWN, on_press_down, (void*)(uintptr_t)KEY_ID_SET);

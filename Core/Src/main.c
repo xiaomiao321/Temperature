@@ -80,8 +80,10 @@ extern DMA_HandleTypeDef hdma_usart2_rx;
 #define UART2_BUF_SIZE 64
 
 /* 格式化输出温度到 UART1 */
-uint16_t g_temp_threshold1 = 30; /* 第一组阈值 (CH1-CH4) */
-uint16_t g_temp_threshold2 = 30; /* 第二组阈值 (CH5-CH8) */
+/* 运行期阈值: 每轮主循环由 TEMP_SETTING_GetValue1/2() 覆盖(Flash 值或出厂默认),
+ * 此处初值仅占位。分组: 阈值1=CH1~CH7, 阈值2=CH8 (见 temperature.c / board_config.h)。 */
+uint16_t g_temp_threshold1 = 30; /* 第一组阈值 (CH1-CH7) */
+uint16_t g_temp_threshold2 = 30; /* 第二组阈值 (CH8)     */
 
 /* 外部温度变量声明 */
 extern float temperature[8];
@@ -95,7 +97,7 @@ extern uint8_t manual_alarm;
  * 格式: t=秒.毫秒 T1..T8=温度 TH1/TH2=阈值 ALM=报警 K=K1K2K3K4实际电平
  * 主循环每 1s 定时调用一次; 时间戳便于做升温/响应时间测试。 */
 void Print_Temperature(void) {
-  char buf[192];
+  char buf[224];
   int len = 0;
 
   /* 时间戳: 开机秒数 (秒.毫秒) */
@@ -123,6 +125,13 @@ void Print_Temperature(void) {
   /* 综合报警状态 (与继电器输出一致) */
   unsigned alm = (manual_alarm || temp_alarm_latched) ? 1u : 0u;
   len += sprintf(&buf[len], "ALM=%u ", alm);
+
+  /* 按键调试: MAN=手动报警标志 LAT=温度锁定; BM/BR=手动(PA12)/复位(PA15)引脚原始电平
+   * 按住手动键看 BM 是否变化: 若一直=1 说明 1.93V 被读成高, 引脚从不翻转 => 按键无效 */
+  unsigned bm = HAL_GPIO_ReadPin(Manual_Btn_GPIO_Port, Manual_Btn_Pin);
+  unsigned br = HAL_GPIO_ReadPin(Reset_Btn_GPIO_Port, Reset_Btn_Pin);
+  len += sprintf(&buf[len], "MAN=%u LAT=%u BM=%u BR=%u ", (unsigned)manual_alarm,
+                 (unsigned)temp_alarm_latched, bm, br);
 
   /* 继电器实际输出电平 K1 K2 K3 K4 (1=吸合) */
   unsigned k1 = HAL_GPIO_ReadPin(K1_ALARM_Port, K1_ALARM_Pin);
@@ -240,7 +249,11 @@ int main(void)
         TEMP_SETTING_Handler();
         TEMP_SETTING_Display();
     } else {
-        Display_SetMode(DISP_MODE_ROTATION);
+        /* 仅在刚从设置模式退出时切回轮询; 轮询↔报警由 Display_CheckAlarm 管理,
+         * 不要每轮强制 ROTATION, 否则会反复清零计时器把画面冻结在 CH1/CH8。 */
+        if (Display_GetMode() == DISP_MODE_SETTING) {
+            Display_SetMode(DISP_MODE_ROTATION);
+        }
         TEMP_SETTING_Handler();   /* 仍检测 SET 键进入设置模式 */
         Display_CheckAlarm();     /* 检查 + 可能的模式切换为报警 */
         Display_Handler();        /* 执行 M0/M1 显示 */

@@ -29,13 +29,13 @@ const uint8_t SEG_CODE[] = {
     0x7F,  /* 点：只有小数点 */
     0x89,  /* H: b,c,e,f,g 亮 */
     0xC7,  /* L: d,e,f 亮 */
-    0xA3,  /* r: e,f,g 亮 (小写 r) */
+    0xAF,  /* r: e,g 亮 (小写 r; Err 用) */
     0x91,  /* n: c,e,g 亮 (小写 n) */
     0x87,  /* y: b,c,d,f,g 亮 */
     0xBF,  /* -: 只有 g 段亮 (负号) */
-    0xF7,  /* I: 仅 c 段 */
+    0xF7,  /* I: 仅 d 段 (下横, 仅 HiG 超温提示用) */
     0x90,  /* G: a,b,c,d,f,g 亮 (同 9) */
-    0xA3,  /* o: e,f,g 亮 (同 r, 上下文区分) */
+    0xA3,  /* o: c,d,e,g 亮 (小写 o) */
     0xC8,  /* N: a,b,c,e,f 亮 */
     0xCA   /* M: a,c,e,g 亮 */
 };

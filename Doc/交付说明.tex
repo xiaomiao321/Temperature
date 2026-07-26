@@ -1,0 +1,701 @@
+% !TEX program = xelatex
+% 编译: xelatex 交付说明.tex   需两遍以生成目录
+% 或:   latexmk -xelatex 交付说明.tex
+\documentclass[a4paper,11pt]{ctexart}
+
+\usepackage{geometry}
+\geometry{margin=2.2cm}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{caption}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{textcomp}
+\usepackage{fancyhdr}
+\usepackage[hidelinks]{hyperref}
+
+\captionsetup{labelsep=quad,font=small}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+% ---- 轻量提示框, 仅依赖 xcolor ----
+\newsavebox{\noteboxsave}
+\newenvironment{notebox}[1][red!7]{%
+  \def\noteboxcolor{#1}%
+  \par\smallskip\noindent
+  \begin{lrbox}{\noteboxsave}%
+  \begin{minipage}{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}\small\setlength{\parskip}{2pt}}%
+  {\end{minipage}\end{lrbox}%
+  \fcolorbox{black!35}{\noteboxcolor}{\usebox{\noteboxsave}}\par\smallskip}
+
+% 页眉页脚
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small 八通道 PT100 温度监控主机 · 交付说明}
+\rhead{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% TikZ 通用样式
+\tikzset{
+  box/.style={draw, rounded corners, align=center, inner sep=4pt, minimum height=1cm},
+  pwr/.style={-{Latex[length=2mm]}, thick, red!70!black},
+  sig/.style={-{Latex[length=2mm]}, thick, blue!70!black},
+  ctl/.style={-{Latex[length=2mm]}, thick, black},
+  dbg/.style={-{Latex[length=2mm]}, thick, teal!75!black},
+  wire/.style={thick},
+  used/.style={thick, blue!65!black},
+  unused/.style={thick, gray!60, dash pattern=on 2pt off 1.6pt},
+}
+
+\title{\bfseries 八通道 PT100 温度监控主机\\[4pt]\large 交 付 说 明 书}
+\author{交付版固件：4 路继电器 + 防火阀 + 串口调试输出}
+\date{主控 STM32F103C8T6\quad|\quad 调试串口 UART1 @115200 8N1}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\begin{notebox}[blue!6]
+本文档面向现场安装、使用人员与后期维护技术人员。源代码工程随本说明一同交付，采用
+CMake 加 STM32CubeMX，可调参数集中于 \texttt{Core/Inc/board\_config.h}。
+\end{notebox}
+
+\newpage
+% =====================================================================
+\section*{版本记录}
+\addcontentsline{toc}{section}{版本记录}
+\vspace{2ex}
+\renewcommand{\arraystretch}{1.4}
+\begin{center}
+\begin{tabular}{|c|c|l|c|c|}
+\hline
+版本 & 日期 & 修改原因 & 页面 & 撰写人 \\
+\hline
+V1.0 & 2026/07/25 & 创建文档 & 全部 & 苗翔宇\\
+\hline
+\end{tabular}
+\end{center}
+\renewcommand{\arraystretch}{1.0}
+
+\newpage
+\tableofcontents
+\newpage
+
+% =====================================================================
+\section{系统概述}
+本设备是一台厨房、管道防火用八通道温度监控主机，实时采集 8 路 PT100 温度，任一通道超过
+设定阈值即判定为超温报警，并联动 4 路继电器执行动作：
+
+\renewcommand{\arraystretch}{1.3}
+\begin{center}
+\begin{tabular}{|c|l|l|}
+\hline
+继电器 & 联动对象 & 报警时动作 \\
+\hline
+K1 & 声光警报器 & 接通，报警器动作\\
+\hline
+K2 & 风机，排烟或送风 & 断开，风机停转\\
+\hline
+K3 & 燃气或煤气断气阀 & 断气，切断供气\\
+\hline
+K4 & 防火阀，电动带复位 & 关阀，封闭管道\\
+\hline
+\end{tabular}
+\end{center}
+\renewcommand{\arraystretch}{1.0}
+
+报警后锁定保持，需人工按复位键才解除；复位时防火阀自动回到开阀位。另设手动键可人工强制
+触发或解除报警，用于演示与联动测试。
+
+\medskip
+设计上有三点源自现场沟通。其一是断电失效安全：设备断电时全部继电器释放，防火阀走开阀线
+保持常开，符合防火阀应有状态；现场另配独立电源开关，设备故障时可直接断电，不影响其他常通
+设备。其二是技术员与普通人分工：普通操作只用门板三键，即电源、复位、手动；温度阈值属调试项，
+由技术员在箱内用四个设置键完成、或经电脑串口查看，装好后一般不再改动。其三是考虑 PT100
+热惯性：传感器升降温较慢、约分钟级，故复位后设三分钟报警抑制期，防止余温反复触发。
+
+% =====================================================================
+\section{配电箱内部构成与信号流}
+配电箱内共三大件加一组继电器。开关电源把 220V AC 转成 24V DC，给主控板供电，并向 4 路
+继电器公共端提供 24V。PT100 采集卡有 8 路 PT100 输入，已配置为主动上报模式，自己定时发
+数据、单片机不需发查询命令，经 RS485 输出。主控板 STM32F103C8T6 负责解析温度、判断报警、
+驱动继电器与数码管、指示灯，并输出调试串口。4 路继电器模块受主控板控制，公共端接 24V。
+
+\begin{figure}[h]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small]
+  \node[box,fill=orange!22,minimum width=2.0cm] (ac)  at (0,4.2)  {220V AC\\进线};
+  \node[box,fill=orange!12,minimum width=2.4cm] (psu) at (3.3,4.2){开关电源\\24V DC};
+  \node[box,fill=blue!8,minimum width=2.6cm]    (card)at (0,1.4)  {PT100 采集卡\\主动上报};
+  \node[box,fill=blue!8,minimum width=2.2cm]    (rs)  at (3.4,1.4){RS485/TTL\\模块};
+  \node[box,fill=green!12,minimum width=3.2cm,minimum height=1.5cm] (mcu) at (7.5,1.4){主控板\\STM32F103C8T6};
+  \node[box,fill=red!8,minimum width=2.4cm]     (rly) at (11.7,1.4){4 路继电器\\COM=+24V};
+  \node[box,fill=gray!12,minimum width=2.8cm,minimum height=1.4cm] (exe) at (11.7,-1.4){外部执行器\\警报/风机/\\断气阀/防火阀};
+  \node[box,fill=yellow!18,minimum width=2.2cm] (pc)  at (7.5,-1.4){技术员电脑};
+
+  % 电源 (红)
+  \draw[pwr] (ac) -- (psu);
+  \draw[pwr] (psu.south) -- ++(0,-0.7) -| (mcu.north);
+  \draw[pwr] (psu.north) -- ++(0,0.6) -| (rly.north);
+  \node[font=\scriptsize,text=red!70!black] at (5.6,3.2) {24V 供电};
+  \node[font=\scriptsize,text=red!70!black] at (7.5,5.2) {24V $\to$ 继电器 COM};
+
+  % 信号链 (蓝/黑)
+  \draw[sig] (card) -- (rs)  node[midway,above,font=\scriptsize]{RS485};
+  \draw[sig] (rs) -- (mcu)   node[midway,above,font=\scriptsize]{UART2};
+  \draw[ctl] (mcu) -- (rly)  node[midway,above,font=\scriptsize]{控制};
+  \draw[ctl] (rly) -- (exe);
+  % 调试 (青)
+  \draw[dbg] (mcu) -- (pc)   node[midway,left,font=\scriptsize]{UART1};
+\end{tikzpicture}}
+\caption{配电箱内部构成与信号流：红为电源，蓝为温度信号，黑为继电器控制，青为调试串口}
+\label{fig:flow}
+\end{figure}
+
+采集卡数据格式为 Modbus 0x04 响应，主动上报，每帧 21 字节：
+\begin{center}\small
+\begin{tabular}{@{}l@{}}
+\texttt{01 04 10 [D0H D0L] [D1H D1L] \dots [D7H D7L] [CRC\_L CRC\_H]}\\[2pt]
+\end{tabular}
+\end{center}
+其中 \texttt{01} 是从机地址，\texttt{04} 是功能码，\texttt{10} 是数据字节数、即 16 字节。
+8 路温度各占 2 字节、大端序，实际温度等于原值除以 10、放大 10 倍。若某路原值为 $-5000$，
+表示该路传感器故障，显示与串口输出 Err 或 ERR。
+
+% =====================================================================
+\section{接线说明}
+\subsection{端子/引脚总对照表}
+\renewcommand{\arraystretch}{1.25}
+\begin{longtable}{|L{1.35cm}|L{2.4cm}|C{1.75cm}|L{3.3cm}|L{4.2cm}|}
+\hline
+\textbf{类别} & \textbf{名称} & \textbf{MCU 引脚} & \textbf{原始标签} & \textbf{说明}\\
+\hline
+\endfirsthead
+\hline
+\textbf{类别} & \textbf{名称} & \textbf{MCU 引脚} & \textbf{原始标签} & \textbf{说明}\\
+\hline
+\endhead
+继电器 & K1 警报    & PB5 & Relay\_24  & 报警吸合\\ \hline
+继电器 & K2 风机    & PB6 & Relay\_220 & 报警吸合\\ \hline
+继电器 & K3 断气阀  & PA0 & Relay3     & 报警吸合\\ \hline
+继电器 & K4 防火阀  & PA1 & Relay4     & 独立状态机，见第~\ref{sub:damper}~节\\ \hline
+指示灯 & 大蓝灯   & PB14 & LED\_Red    & 报警指示，温度报警常亮、通信异常快闪\\ \hline
+指示灯 & 手动红灯 & PB15 & LED\_Yellow & 手动报警时常亮\\ \hline
+指示灯 & 心跳红灯 & PB13 & LED\_Blue   & 通信心跳，每帧闪一下\\ \hline
+指示灯 & 板载灯     & PC13 & LED         & 板载指示\\ \hline
+按键 & 设置 SET & PB3 & Btn1 & 箱内，调试用\\ \hline
+按键 & 加 ＋    & PB4 & Btn2 & 箱内，调试用\\ \hline
+按键 & 减 －    & PB0 & Btn3 & 箱内，调试用\\ \hline
+按键 & 移位     & PB1 & Btn4 & 箱内，调试用\\ \hline
+按键 & 手动     & PA12 & Manual\_Btn & 门板红色键，高有效\\ \hline
+按键 & 复位     & PA15 & Reset\_Btn  & 门板绿色键，高有效\\ \hline
+数码管 & 组1 & PA5/6/7 & SDI1\slash SCLK1\slash LOAD1 & 轮显 CH1--CH8\\ \hline
+数码管 & 组2 & PB7/8/9 & SDI2\slash SCLK2\slash LOAD2 & 固定显示 CH8\\ \hline
+串口 & UART1 & PA9/PA10 & --- & 调试，115200\\ \hline
+串口 & UART2 & PA2/PA3 & --- & 接 RS485/TTL\\ \hline
+\end{longtable}
+\renewcommand{\arraystretch}{1.0}
+
+\subsection{继电器接线（重点）}
+接线模型是：开关电源 24V+ 接到所有继电器公共端 COM，继电器触点 NO 或 NC 接外部执行器，
+再回到 GND 端子、即 24V-。也就是把继电器当高边开关用，吸合时把 +24V 送到对应执行器。
+
+\medskip
+固件约定报警即继电器吸合 SET、正常即释放 RESET。K1--K3 三路逻辑完全一致，常开常闭
+NO 或 NC 由现场按执行器需求选择接线，固件不区分。建议接法如下：
+
+\renewcommand{\arraystretch}{1.3}
+\begin{center}
+\begin{tabular}{|c|l|l|c|L{4.3cm}|}
+\hline
+继电器 & 平时状态 & 报警时 & 建议接点 & 说明\\
+\hline
+K1 警报   & 静默     & 报警器动作 & NO 常开 & 平时不通电，报警才接通 24V\\
+\hline
+K2 风机   & 风机运行 & 风机停     & NC 常闭 & 平时 24V 使风机接触器运行，报警断开\\
+\hline
+K3 断气阀 & 供气     & 断气       & NC 常闭 & 平时供气，报警断开后断气，最终按阀型确定\\
+\hline
+\end{tabular}
+\end{center}
+\renewcommand{\arraystretch}{1.0}
+
+\begin{figure}[h]
+\centering
+\resizebox{0.96\textwidth}{!}{%
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small,
+  relaybox/.style={draw,rounded corners,fill=red!8,minimum width=1.7cm,minimum height=0.9cm,align=center,font=\scriptsize},
+  loadbox/.style={draw,fill=gray!12,minimum width=1.9cm,minimum height=0.8cm,align=center,font=\scriptsize}]
+  % 母线
+  \draw[very thick,red!70!black] (-0.3,5.2) -- (13.6,5.2);
+  \node[font=\scriptsize,text=red!70!black,anchor=west] at (13.6,5.2){+24V};
+  \draw[very thick,black!80] (-0.3,-0.5) -- (13.6,-0.5);
+  \node[font=\scriptsize,anchor=west] at (13.6,-0.5){GND 24V-};
+
+  % ---- K1 : NO 用 ----
+  \node[relaybox] (k1) at (1.5,3.6){K1\\警报};
+  \draw[wire] (1.5,4.05)--(1.5,5.2); \node[font=\scriptsize,anchor=south west] at (1.55,4.3){COM};
+  \draw[unused] (1.1,3.15)--(1.1,2.3); \node[font=\scriptsize,text=gray] at (0.72,2.7){NC};
+  \draw[used] (1.9,3.15)--(1.9,2.3); \node[font=\scriptsize] at (2.28,2.7){NO};
+  \node[loadbox] (l1) at (1.9,1.4){警报器};
+  \draw[used] (1.9,2.3)--(l1.north); \draw[used] (l1.south)--(1.9,-0.5);
+
+  % ---- K2 : NC 用 ----
+  \node[relaybox] (k2) at (5.0,3.6){K2\\风机};
+  \draw[wire] (5.0,4.05)--(5.0,5.2); \node[font=\scriptsize,anchor=south west] at (5.05,4.3){COM};
+  \draw[used] (4.6,3.15)--(4.6,2.3); \node[font=\scriptsize] at (4.22,2.7){NC};
+  \draw[unused] (5.4,3.15)--(5.4,2.3); \node[font=\scriptsize,text=gray] at (5.78,2.7){NO};
+  \node[loadbox] (l2) at (4.6,1.4){风机接触器};
+  \draw[used] (4.6,2.3)--(l2.north); \draw[used] (l2.south)--(4.6,-0.5);
+
+  % ---- K3 : NC 用 ----
+  \node[relaybox] (k3) at (8.5,3.6){K3\\断气阀};
+  \draw[wire] (8.5,4.05)--(8.5,5.2); \node[font=\scriptsize,anchor=south west] at (8.55,4.3){COM};
+  \draw[used] (8.1,3.15)--(8.1,2.3); \node[font=\scriptsize] at (7.72,2.7){NC};
+  \draw[unused] (8.9,3.15)--(8.9,2.3); \node[font=\scriptsize,text=gray] at (9.28,2.7){NO};
+  \node[loadbox] (l3) at (8.1,1.4){断气阀};
+  \draw[used] (8.1,2.3)--(l3.north); \draw[used] (l3.south)--(8.1,-0.5);
+
+  % ---- K4 : 两触点均用 ----
+  \node[relaybox] (k4) at (11.9,3.6){K4\\防火阀};
+  \draw[wire] (11.9,4.05)--(11.9,5.2); \node[font=\scriptsize,anchor=south west] at (11.95,4.3){COM};
+  \draw[used] (11.5,3.15)--(11.5,1.9); \node[font=\scriptsize] at (11.12,2.7){NC};
+  \draw[used] (12.3,3.15)--(12.3,1.9); \node[font=\scriptsize] at (12.68,2.7){NO};
+  \node[loadbox,minimum width=2.6cm,minimum height=0.95cm] (l4) at (11.9,1.25){防火阀执行器\\见图~\ref{fig:damper}};
+  \draw[used] (l4.south)--(11.9,-0.5);
+\end{tikzpicture}}
+\caption{继电器接点接法：蓝为已用接点，灰虚线为未用接点，COM 统一接 +24V}
+\label{fig:relay}
+\end{figure}
+
+\begin{notebox}
+注意：上表 NO/NC 是按平时与报警的期望动作给的建议，最终以执行器实际类型为准。固件只管
+报警吸合、正常释放，与选 NO 还是 NC 无关。
+\end{notebox}
+
+\subsection{防火阀 K4 接线}\label{sub:damper}
+K4 驱动的是电动防火阀执行器，需要报警关阀、复位开阀。固件用独立状态机控制，见
+第~\ref{sub:damper-fsm}~节，当前为单路加执行器内置限位自停方案。执行器为 DC24V 三线制、
+即开阀、关阀、公共三线、带内置限位，接法见下图。
+
+\begin{figure}[h]
+\centering
+\resizebox{0.92\textwidth}{!}{%
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small,
+  relaybox/.style={draw,rounded corners,fill=red!8,minimum width=1.4cm,minimum height=0.9cm,align=center},
+  loadbox/.style={draw,fill=gray!12,minimum width=2.4cm,minimum height=2.0cm,align=center}]
+  \node (p24) at (0,2){+24V};
+  \node[relaybox] (k4) at (2.4,2){K4};
+  \draw[wire] (p24)--(k4) node[midway,above,font=\scriptsize]{COM};
+  \node (open)  at (6.2,3.1){黑线 开阀};
+  \node (close) at (6.2,0.9){蓝线 关阀};
+  \draw[used] (k4.east)--(open)  node[pos=0.55,above,font=\scriptsize]{NC 释放/正常};
+  \draw[used] (k4.east)--(close) node[pos=0.55,below,font=\scriptsize]{NO 吸合/报警};
+  \node[loadbox] (act) at (9.6,2){防火阀\\执行器};
+  \draw[used] (open)--(act.north west);
+  \draw[used] (close)--(act.south west);
+  \node (gnd) at (13.2,2){24V-};
+  \draw[wire] (act.east)--(gnd) node[midway,above,font=\scriptsize]{执行器公共};
+  \draw[unused] (act.south)--++(0,-1.2) node[below,font=\scriptsize,align=center]{黄/绿/白 限位反馈\\无源，内部自停};
+\end{tikzpicture}}
+\caption{防火阀 K4 接线，DC24V：释放走开阀、吸合走关阀、限位到位自停}
+\label{fig:damper}
+\end{figure}
+
+正常时 K4 释放，走 NC 黑线开阀，阀保持开；报警时 K4 吸合，走 NO 蓝线关阀，阀关闭；复位后
+报警解除、K4 释放，回到开阀线，限位到位自停。设备断电时 K4 同样释放、走 NC 开阀线，阀常开，
+符合防火阀断电应有状态。
+
+\begin{notebox}
+重要：K4 的接线以实际购买的防火阀执行器铭牌与说明书为准。线色定义、开阀与关阀绕组、供电
+电压、是否带内置限位，都可能因型号而异。本图按当前所用型号绘制，一旦更换执行器型号，必须
+重新核对铭牌后再接线与设置。
+\end{notebox}
+
+\subsection{温度采集 / 电源 / 门板}
+温度采集方面，采集卡 RS485 的 A/B 接 RS485/TTL 模块，模块 TTL 端 RX/TX 接主控板 UART2，
+其中 PA3 接 RX、PA2 接 TX；采集卡主动上报，主控板只收不发。进线电源为 220V AC 三线、
+即 L/N/PE，经门上电源开关进开关电源，现场只需引三根进线到预留接头。门板上给普通操作者留
+三个键：电源开关、复位、手动；其中复位为绿色键、手动为红色键。箱内四个设置键 SET、加、减、
+移位供技术员设阈值，装好后一般不动。
+
+% =====================================================================
+\section{使用方法}
+\subsection{上电自检}
+上电或复位后，两组数码管依次显示，约 1.7 秒：
+\begin{center}\ttfamily
+888 / 888 $\to$ 灭 $\to$ 123 / 456 $\to$ 灭 $\to$ 030 / 030 $\to$ 进入正常轮显
+\end{center}
+看到这段说明数码管、驱动正常。若上电时大蓝灯闪一下、约 200ms，表示上次是看门狗复位，正常
+上电不闪。
+
+\subsection{正常显示}
+左组轮流显示 \texttt{CH1 $\to$ 温度1 $\to$ CH2 $\to$ 温度2 $\to$ \dots{} $\to$ CH8 $\to$ 温度8}
+再回到 CH1，每屏约 1.5 秒。右组固定显示 \texttt{CH8} 标签与 CH8 温度，因为 CH8 是独立阈值
+分区。温度显示规则如下：
+\renewcommand{\arraystretch}{1.3}
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+情况 & 显示 & 例\\
+\hline
+正常 $<100$℃ & 两位整数加一位小数，十位后带小数点 & \texttt{28.8}\\
+\hline
+正常 $\ge 100$℃ & 三位整数，无小数点 & \texttt{125}\\
+\hline
+负温度 & \texttt{-} 加两位 & \texttt{-15}\\
+\hline
+该路故障或未接 & \texttt{Err} & \texttt{Err}\\
+\hline
+$\ge 1000$℃ 或 $\le -100$℃ & \texttt{HiG} 或 \texttt{Lo-} & ---\\
+\hline
+\end{tabular}
+\end{center}
+\renewcommand{\arraystretch}{1.0}
+
+\subsection{报警显示}
+任一通道超温、或按下手动键后，自动切到报警显示，循环显示：
+\begin{center}\ttfamily
+ALA $\to$ 报警通道号, 如 CH3 $\to$ 该通道温度 $\to$ 下一个报警通道\dots
+\end{center}
+仅手动报警时通道号位置显示 MAN。同时大蓝灯常亮表示温度报警、手动红灯亮表示手动报警，并联动
+继电器动作。
+
+\subsection{指示灯含义}\label{sub:led}
+面板上共三只指示灯，两只小红灯加一只大蓝灯。灯色与常规习惯不同，属正常现象，判断以灯的行为
+为准，不要凭颜色先入为主。报警指示是大蓝灯，不是红灯。
+\renewcommand{\arraystretch}{1.3}
+\begin{center}
+\begin{tabular}{|l|l|L{7.2cm}|}
+\hline
+灯 & 状态 & 含义\\
+\hline
+大蓝灯 & 常亮 & 温度报警锁定中，继电器同时动作\\
+\hline
+大蓝灯 & 2\,Hz 快闪 & 超过 2 秒没收到温度数据，通信或采集卡异常\\
+\hline
+大蓝灯 & 灭 & 正常，有数据且无温度报警\\
+\hline
+心跳红灯 & 间歇闪一下 & 通信心跳，每收到数据闪 30ms，规律闪表示通信正常\\
+\hline
+手动红灯 & 常亮 & 手动报警激活中\\
+\hline
+\end{tabular}
+\end{center}
+\renewcommand{\arraystretch}{1.0}
+\begin{notebox}
+关于指示灯颜色：出厂时面板灯位间距偏小，最终装了两只小红灯与一只大蓝灯，颜色分配与直觉相反，
+这是正常的、不影响功能。报警看大蓝灯，温度报警时常亮、通信异常时快闪；两只小红灯按行为区分，
+心跳红灯每收到一帧数据闪一下、手动报警时手动红灯常亮。固件内部引脚仍沿用原始标签
+\texttt{LED\_Red}、\texttt{LED\_Yellow}、\texttt{LED\_Blue}，与实际焊装的灯颜色不对应，同属正常。
+\end{notebox}
+
+\subsection{复位与手动}
+门板绿色键为复位，清除全部报警、含温度锁定与手动，防火阀自动回到开阀位，并启动三分钟报警
+抑制期。门板红色键为手动，按一下切换手动报警、开关交替，用于演示或强制联动测试。
+
+% =====================================================================
+\section{报警与控制逻辑}
+\subsection{超温判定}
+每收到一帧温度数据即判定：\texttt{CH1--CH7} 与阈值1比较，\texttt{CH8} 与阈值2比较；任一路
+温度不小于阈值即触发。传感器故障、即 Err 的通道不参与判定。
+
+\subsection{报警锁定与抑制期}
+触发后报警锁定置位并保持，直到按复位键。复位后进入三分钟抑制期，期间即使仍超温也不重新
+锁定报警，避免 PT100 余温导致反复报警；抑制期过后恢复正常判定。抑制期长度由宏
+\texttt{ALARM\_COOLDOWN\_MS} 配置。
+
+\subsection{防火阀 K4 状态机}\label{sub:damper-fsm}
+当前方案为 \texttt{DAMPER\_HAS\_LIMIT\_SWITCH = 1}，执行器带内置限位、到位自停。
+\renewcommand{\arraystretch}{1.3}
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+状态 & K4 & 阀\\
+\hline
+正常 & 释放，走 NC 开阀线 & 开\\
+\hline
+报警 & 吸合，走 NO 关阀线 & 关\\
+\hline
+复位 & 释放，回开阀线，限位自停 & 开\\
+\hline
+断电 & 释放 & 开，失效安全\\
+\hline
+\end{tabular}
+\end{center}
+\renewcommand{\arraystretch}{1.0}
+\begin{notebox}[blue!6]
+备用方案：若换成无限位执行器，需在 \texttt{board\_config.h} 把
+\texttt{DAMPER\_HAS\_LIMIT\_SWITCH} 改为 0，启用 K5 双路正反转并填入行程时间
+\texttt{DAMPER\_TRAVEL\_MS}。当前执行器带限位，未启用。
+\end{notebox}
+
+\subsection{继电器综合动作}
+综合报警条件为手动报警或温度报警锁定。条件成立时 K1/K2/K3 吸合 SET、K4 关阀；条件解除时
+K1/K2/K3 释放 RESET、K4 开阀。
+
+% =====================================================================
+\section{温度阈值设置}
+本节面向技术员，用箱内 4 个设置键操作。设备支持两组独立阈值：阈值1 管 CH1--CH7、阈值2
+管 CH8。
+\renewcommand{\arraystretch}{1.3}
+\begin{center}
+\begin{tabular}{|l|L{5.6cm}|L{5.0cm}|}
+\hline
+键 & 短按 & 长按, 不小于 1 秒\\
+\hline
+SET & 进入或退出设置模式，退出时自动存 Flash & 在设置模式下切换阈值1与阈值2\\
+\hline
+加 ＋ & 当前位数字 +1 & ---\\
+\hline
+减 － & 当前位数字 -1 & ---\\
+\hline
+移位 & 切换编辑位：个位 $\to$ 十位 $\to$ 百位 $\to$ 个位 & ---\\
+\hline
+\end{tabular}
+\end{center}
+\renewcommand{\arraystretch}{1.0}
+操作步骤：
+\begin{enumerate}[leftmargin=1.6em,itemsep=2pt]
+  \item 短按 SET 进入设置。正在编辑的那组数码管闪烁、当前位闪，另一组常亮显示另一组阈值。
+  \item 用移位选位，加、减改数字。
+  \item 需改另一组时，长按 SET 切换到阈值2，或切回阈值1。
+  \item 改完短按 SET 确认，数值写入 Flash 断电保存，退回正常显示。
+\end{enumerate}
+\begin{notebox}
+阈值范围 0--999 摄氏度。断电后设置值保存在 Flash，除非存储器寿命耗尽否则一直保留。出厂
+默认阈值为占位值，见第~\ref{sec:params}~节，必须经现场升温实验标定后再写入真实值。
+\end{notebox}
+
+% =====================================================================
+\section{电脑串口监控}
+本节面向技术员。调试串口引出后，用 USB 转 TTL 接 UART1，串口工具设 115200 / 8 / N / 1。
+
+上电横幅在插上串口时即可确认程序在跑，并含编译时间戳、便于核对固件版本：
+\begin{center}\small\ttfamily
+\begin{tabular}{@{}l@{}}
+==============================\\
+ 8CH PT100 Temp Monitor (Delivery)\\
+ Build : <编译日期> <编译时间>\\
+ Debug : UART1 @115200 8N1\\
+ Relay : K1=Alarm K2=Fan K3=Gas K4=Damper\\
+==============================\\
+\end{tabular}
+\end{center}
+
+运行日志每 1 秒一行，不依赖温度帧；没接采集卡也照打，无效通道显示 ERR：
+\begin{center}\small\ttfamily
+t=123.456 T1=25.3 T2=26.1 \dots{} T8=ERR TH1=100 TH2=100 ALM=0 MAN=0 LAT=0 BM=0 BR=0 K=0000
+\end{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{center}
+\begin{tabular}{|l|L{9.2cm}|}
+\hline
+字段 & 含义\\
+\hline
+\texttt{t=秒.毫秒} & 开机运行时间，做升温或响应时间测试时的时间戳\\
+\hline
+\texttt{T1..T8} & 8 路温度，单位摄氏度，故障为 \texttt{ERR}\\
+\hline
+\texttt{TH1/TH2} & 当前阈值，分别对应 CH1--7 与 CH8\\
+\hline
+\texttt{ALM} & 综合报警，1 表示报警，与继电器一致\\
+\hline
+\texttt{MAN} & 手动报警标志\\
+\hline
+\texttt{LAT} & 温度报警锁定标志\\
+\hline
+\texttt{BM / BR} & 手动键 PA12、复位键 PA15 的引脚原始电平，调试按键用\\
+\hline
+\texttt{K=k1k2k3k4} & 4 路继电器实际输出电平，1 表示吸合\\
+\hline
+\end{tabular}
+\end{center}
+\renewcommand{\arraystretch}{1.0}
+维护时看这一行即可定位问题：温度是否正常、阈值多少、哪一路报警、继电器是否真的动作、按键
+是否读到。
+
+% =====================================================================
+\section{维护与故障排查}
+\renewcommand{\arraystretch}{1.25}
+\begin{center}
+\begin{longtable}{|L{3.6cm}|L{4.2cm}|L{6.0cm}|}
+\hline
+\textbf{现象} & \textbf{可能原因} & \textbf{排查}\\
+\hline
+\endfirsthead
+\hline
+\textbf{现象} & \textbf{可能原因} & \textbf{排查}\\
+\hline
+\endhead
+大蓝灯 2Hz 快闪、温度全 ERR & 采集卡没上报，或 RS485 接反、断线 & 查采集卡供电、RS485 A/B、TTL 模块 RX/TX；串口看 \texttt{T1..T8} 是否全 ERR\\
+\hline
+某一路一直 ERR & 该路 PT100 断线、短路或故障 & 换传感器或查接线\\
+\hline
+温度对但不报警 & 阈值设太高 & 串口看 \texttt{TH1/TH2}，重设阈值\\
+\hline
+一直误报警 & 阈值太低，或手动报警未解除 & 串口看是 \texttt{LAT} 温度锁定还是 \texttt{MAN} 手动；按复位\\
+\hline
+按复位无反应 & 复位键 PA15 高有效，电平异常 & 串口看 \texttt{BR}：松开应为 0、按下应为 1；异常则查外部下拉\\
+\hline
+按手动无反应 & 手动键 PA12 高有效，电平异常 & 串口看 \texttt{BM}：松开应为 0、按下应为 1；若一直为 1 说明松开电平被读成高，查 PA12 外部下拉是否偏大\\
+\hline
+继电器不动作 & 逻辑或接线 & 串口看 \texttt{K=????} 是否随报警变化；变了说明固件正常，查继电器模块与接线\\
+\hline
+上电反复复位 & 看门狗约 1.6s 未及时喂 & 一般为死循环；本版自检期已加喂狗，正常不会发生\\
+\hline
+防火阀不复位 & 复位未触发，或接线 & 先确认复位键 \texttt{BR} 有效；再查 K4 开阀线、即 NC 黑线接线\\
+\hline
+\end{longtable}
+\end{center}
+\renewcommand{\arraystretch}{1.0}
+\begin{notebox}[blue!6]
+看门狗：独立看门狗超时约 1.6 秒，主循环持续喂狗；程序跑飞会自动复位重启，提高可靠性。
+\end{notebox}
+
+% =====================================================================
+\section{出厂参数与注意事项}\label{sec:params}
+可调参数集中在 \texttt{Core/Inc/board\_config.h}，这是单一事实来源，改板或量产只看这一个文件：
+\renewcommand{\arraystretch}{1.3}
+\begin{center}
+\begin{tabular}{|l|l|c|L{5.0cm}|}
+\hline
+参数 & 宏 & 当前值 & 说明\\
+\hline
+阈值1 默认 & \texttt{TEMP\_TH1\_DEFAULT} & 100 & 占位，待现场实验标定\\
+\hline
+阈值2 默认 & \texttt{TEMP\_TH2\_DEFAULT} & 100 & 占位，待现场实验标定\\
+\hline
+报警抑制期 & \texttt{ALARM\_COOLDOWN\_MS} & 3 分钟 & 复位后不再触发新报警的时间\\
+\hline
+防火阀方案 & \texttt{DAMPER\_HAS\_LIMIT\_SWITCH} & 1 & 1 为带限位单路、当前用；0 为无限位双路\\
+\hline
+\end{tabular}
+\end{center}
+\renewcommand{\arraystretch}{1.0}
+有几点需要注意。阈值必须标定：出厂默认 100℃ 仅为占位值，请按第 6 节做升温实验后再设真实
+阈值，厨房常态温度与着火温度要拉开区分，避免误报或漏报。断电即安全：故障时可直接切电源，
+全部继电器释放、防火阀常开，不影响其他常通设备。门板按键为高电平有效，按下接 3.3V、松开靠
+外部下拉拉到低，维护换线后务必用串口 \texttt{BM/BR} 复验松开为 0、按下为 1。
+
+% =====================================================================
+\section{程序结构说明}
+本节面向开发与维护。
+\subsection{目录与模块}
+应用代码按四层组织，依赖只自上而下：应用层 main.c 只做初始化与主循环调度；业务层放在
+\texttt{App/logic}，只处理逻辑，碰硬件一律走驱动；驱动层放在 \texttt{App/driver}，把外设包成
+干净接口；底层是 board\_config.h 引脚语义加 CubeMX 生成的 BSP 与 STM32 HAL。CubeMX 再生成
+只动 \texttt{Core}，不会碰到 \texttt{App} 下的应用代码。
+\renewcommand{\arraystretch}{1.25}
+\begin{center}
+\begin{tabular}{|c|l|L{7.0cm}|}
+\hline
+层 & 文件 & 职责\\
+\hline
+应用 & \texttt{Core/Src/main.c} & 初始化、主循环调度、外设启动\\
+\hline
+业务 & \texttt{App/logic/temperature.c} & 温度帧解析、报警处理含继电器与 LED、防火阀状态机、通道到阈值分组\\
+\hline
+业务 & \texttt{App/logic/temp\_setting.c} & 阈值设置状态机、Flash 读写，用最后 1KB 页\\
+\hline
+业务 & \texttt{App/logic/display.c} & 轮显、报警、设置三模式显示管理\\
+\hline
+业务 & \texttt{App/logic/report.c} & 串口调试输出 \texttt{Report\_Banner} 与 \texttt{Report\_Temperature}\\
+\hline
+驱动 & \texttt{App/driver/hc595.c} & 74HC595 位操作、段码表 \texttt{SEG\_CODE[]}\\
+\hline
+驱动 & \texttt{App/driver/key.c} & MultiButton 按键，6 键，设置 4 键低有效、手动与复位高有效\\
+\hline
+BSP & \texttt{Core/Inc/board\_config.h} & 单一事实来源：继电器功能映射、阈值默认、抑制期、防火阀方案\\
+\hline
+BSP & \texttt{Core/Inc/main.h} & CubeMX 生成的原始引脚标签，如 Relay\_24、Relay3\\
+\hline
+BSP & \texttt{gpio/usart/dma/iwdg.c} & CubeMX 外设初始化\\
+\hline
+BSP & \texttt{stm32f1xx\_it.c} & 中断，含 UART2 IDLE 收帧\\
+\hline
+\end{tabular}
+\end{center}
+\renewcommand{\arraystretch}{1.0}
+
+\subsection{数据流}
+\begin{center}
+\resizebox{0.98\textwidth}{!}{%
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small,
+  n/.style={box,fill=blue!6,align=center,minimum height=0.9cm}]
+  \node[n] (card) at (0,0){采集卡};
+  \node[n] (u2) at (2.4,0){UART2\\DMA+IDLE};
+  \node[n] (parse) at (5.4,0){Parse\_\\Temperature};
+  \node[n,fill=green!10] (data) at (8.8,0){temperature[8]\\temp\_valid[8]\\报警锁定};
+  \node[n,fill=red!7] (alm) at (8.8,-2.2){报警处理\\K1--K4 + LED};
+  \node[n,fill=gray!10] (disp) at (5.4,-2.2){数码管\\轮显/报警};
+  \node[n,fill=yellow!14] (pr) at (2.4,-2.2){UART1\\每 1s 日志};
+  \draw[sig] (card)--(u2); \draw[sig] (u2)--(parse); \draw[sig] (parse)--(data);
+  \draw[ctl] (data)--(alm); \draw[ctl] (data.south) to[out=-135,in=0] (disp.east);
+  \draw[ctl] (data.south) to[out=-160,in=0] (pr.east);
+  \node[n,fill=orange!12] (set) at (0,-2.2){按键$\to$设置\\$\to$Flash};
+  \draw[ctl] (set)--(pr);
+\end{tikzpicture}}
+\end{center}
+
+\subsection{主循环节拍}
+\texttt{main.c} 的 while(1) 每轮执行：
+\begin{enumerate}[leftmargin=1.6em,itemsep=1pt]
+  \item 设置模式分流：编辑中转设置显示；否则检查报警并做轮显或报警显示。
+  \item \texttt{TEMP\_Alarm\_Handler()} 处理手动与复位、驱动继电器与 LED。
+  \item 刷新 \texttt{g\_temp\_threshold1/2}，取自设置模块。
+  \item 若收到温度帧则解析，解析与打印已解耦。
+  \item 每 1s 调 \texttt{Report\_Temperature()} 打印调试日志。
+  \item 喂狗，再 \texttt{HAL\_Delay(10)}。
+\end{enumerate}
+
+\subsection{改动指引}
+要改哪里看哪里：
+\renewcommand{\arraystretch}{1.25}
+\begin{center}
+\begin{tabular}{|L{6.3cm}|L{7.3cm}|}
+\hline
+想改的东西 & 改哪里\\
+\hline
+阈值默认值、抑制期、防火阀方案 & \texttt{board\_config.h}\\
+\hline
+继电器功能与引脚对应 & \texttt{board\_config.h} 的 \texttt{K1..K4} 宏\\
+\hline
+报警联动逻辑，谁吸合或释放 & \texttt{temperature.c} \texttt{TEMP\_Alarm\_Handler()}\\
+\hline
+防火阀开关与复位时序 & \texttt{temperature.c} \texttt{Damper\_Handler()}\\
+\hline
+数码管显示内容与节奏 & \texttt{display.c}\\
+\hline
+段码字形，某字母显示不对 & \texttt{hc595.c} \texttt{SEG\_CODE[]}\\
+\hline
+串口日志字段 & \texttt{report.c} \texttt{Report\_Temperature()}\\
+\hline
+按键有效电平，高或低 & \texttt{key.c} \texttt{button\_init} 的 active\_level 参数\\
+\hline
+\end{tabular}
+\end{center}
+\renewcommand{\arraystretch}{1.0}
+
+\subsection{编译与烧录}
+工具链为 STM32CubeMX 生成加 CMake、Ninja、arm-none-eabi-gcc。编译命令
+\texttt{cmake -{}-build build/Debug -{}-target Final}，产物为
+\texttt{build/Debug/Final.elf}、\texttt{.hex}、\texttt{.bin}。
+\begin{notebox}
+CubeMX 再生成注意：\texttt{gpio.c} 里手动与复位键的内部下拉、对应宏 \texttt{GPIO\_PULLDOWN}，
+位于 CubeMX 生成区，若从 \texttt{.ioc} 重新生成会被覆盖，需要在 \texttt{.ioc} 里对应设好，
+或再生成后手动补回。
+\end{notebox}
+
+\vfill
+\begin{center}\small\itshape
+文档随固件交付。如接线或阈值有变更，请同步更新本文件对应章节。
+\end{center}
+
+\end{document}

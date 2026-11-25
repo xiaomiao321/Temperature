@@ -1,62 +1,69 @@
-# 八通道 PT100 温控报警主机
+# 8-Channel PT100 Over-Temperature Alarm Controller
 
-厨房与管道防火用的温度监控主机，2026 年 7 月交付客户现场使用。实时采集 8 路 PT100 温度，任一通道超过阈值即报警，联动 4 路继电器：声光警报接通、风机停转、燃气断气阀关闭、防火阀关闭。报警锁定后由人工复位；断电时所有继电器释放，防火阀保持常开，故障时直接断电不影响其他设备。
+English | [中文](README_CN.md)
 
-Eight-channel PT100 over-temperature alarm controller for kitchen and duct fire protection, delivered to a customer in July 2026. STM32F103C8T6 reads a Modbus RS485 PT100 acquisition card, drives four relays (siren, fan, gas valve, fire damper), with seven-segment display, threshold keys and a fail-safe power-off behaviour. Hardware in EasyEDA Pro, firmware in C with STM32 HAL and CMake.
+Temperature monitoring and alarm controller for kitchen and exhaust duct fire protection, built under a paid contract and delivered to the customer site in July 2026. It reads 8 PT100 channels in real time; when any channel passes its threshold it drives four relays: siren and beacon on, fan off, gas shut-off valve closed, fire damper closed. The alarm latches until a manual reset. On power loss every relay releases and the fire damper stays open, so a controller failure only removes itself and never blocks other equipment.
 
-![主控板正面](Hardware/images/正面.png)
-![主控板背面](Hardware/images/背面.png)
+I am the sole hardware and firmware designer.
 
-## 硬件
+![Controller board, front](Hardware/images/正面.png)
+![Controller board, back](Hardware/images/背面.png)
 
-扩展主控板，嘉立创EDA 设计，STM32F103C8T6 核心板、降压模块和 RS485/TTL 模块插装在板上；板上有两组三位数码管（74HC595 驱动）、4 个设置键和手动、复位键、3 只面板指示灯、4 路继电器驱动输出、调试串口。24V 开关电源同时给主控板和继电器公共端供电。
+## Hardware, version 1
 
-![系统框图](Hardware/images/系统框图.png)
+Carrier board designed in EasyEDA Pro. An STM32F103C8T6 core module, a buck module and an RS485 to TTL module plug into it. The board carries two 3-digit 7-segment displays driven by 74HC595, four setting keys plus manual and reset keys, three panel indicators, four relay driver outputs and a debug UART. A 24 V switching supply powers both the board and the relay common.
 
-![扩展板原理图](Hardware/images/原理图_扩展板.png)
+![System block diagram](Hardware/images/系统框图.png)
 
-工程文件、原理图 PDF 和制板文件在 `Hardware/`。
+![Carrier board schematic](Hardware/images/原理图_扩展板.png)
 
-## 固件
+Project files, schematic PDF and fabrication files are in `Hardware/`.
 
-`Software/`，STM32CubeMX 加 CMake，arm-none-eabi-gcc。
+## Firmware
 
-- 温度：PT100 采集卡配置为主动上报，MCU 通过 UART2 只收不发，解析 Modbus 0x04 帧。
-- 报警逻辑：CH1 到 CH7 一组阈值，CH8 单独一组；传感器故障显示 Err；报警锁定，人工复位后 3 分钟抑制期，避免 PT100 热惯性造成余温反复触发。
-- 防火阀：独立状态机，报警关阀、复位开阀，执行器内置限位自停。
-- 人机：数码管轮显各路温度，箱内 4 键设置阈值并存 Flash；门板手动键可强制触发或解除报警用于联动测试。
-- 可靠性：独立看门狗约 1.6 秒；调试串口 UART1 每秒打印状态。
-- 分层：`App/logic/` 业务不碰寄存器，`App/driver/` 设备驱动，`Core/` 为 CubeMX 生成的 BSP，`board_config.h` 集中引脚语义和可调参数。
+`Software/`: STM32CubeMX plus CMake, arm-none-eabi-gcc.
 
-构建、烧录、配置项和各文件职责见 `Software/README.md`。
+- Temperature: the PT100 acquisition card is set to report on its own; the MCU only listens on UART2 and parses Modbus function 0x04 frames.
+- Alarm logic: one threshold for CH1 to CH7 and a separate one for CH8; a failed sensor shows Err; the alarm latches, and after a manual reset a 3-minute hold-off stops residual heat at the PT100 probes from retriggering it.
+- Fire damper: its own state machine, closes on alarm and opens on reset; the actuator stops at its built-in limit switches.
+- User interface: the displays cycle through the channel temperatures; four keys inside the cabinet set thresholds, stored in flash; a manual key on the door forces or clears the alarm for interlock testing.
+- Reliability: independent watchdog of about 1.6 s; the debug UART1 prints the status every second.
+- Structure: `App/logic/` holds business logic and never touches registers, `App/driver/` holds device drivers, `Core/` is the CubeMX-generated BSP, and `board_config.h` collects pin meanings and tunable parameters.
 
-## 交付文档
+Build, flashing, configuration options and file responsibilities are in `Software/README.md`.
 
-`Doc/交付说明.pdf`：面向现场安装与维护人员的说明书，含配电箱信号流、端子对照表、防火阀接线、显示与操作说明、报警逻辑、故障排查和参数表。
+## Delivery documentation
 
-## 第二版：联网改造
+`Doc/交付说明.pdf`: manual for the site installers and maintenance staff, with the cabinet signal flow, terminal tables, fire damper wiring, display and operation, alarm logic, troubleshooting and the parameter table. Written in Chinese for the customer.
 
-第二版把第一版的核心板、降压模块、RS485 模块和继电器模块集成到一块主控板上，并增加与 Linux 网关的接口。硬件设计已完成，联网网关软件进行中。
+## Version 2: networked controller
 
-![第二版主控板正面](Hardware/v2/正面.png)
-![第二版主控板背面](Hardware/v2/背面.png)
+Version 2 merges the core module, buck module, RS485 module and relay modules of version 1 into one controller board and adds an interface to a Linux gateway. In November 2026 the complete system was assembled into its enclosure, and temperature readings, relay interlocks, alarm latch and reset, HTTPS data upload and alarm video recording all passed bench testing.
 
-- STM32F103 板载，SWD、BOOT 拨码、复位与调试串口。
-- 24V 输入，24V 转 5V 5A 给 Linux 网关供电，24V 转 5V 2A 与 5V 转 3.3V 给板内供电，均带保险与保护。
-- 4 路继电器，250VAC 10A，高压区与低压区用隔离槽分开，CH1、CH2 可用跳线选择 24V 或 GND 公共端。
-- RS485 收发器接 PT100 采集卡，独立 UART 接 Linux 网关，保留第一版的数码管、四个设置键和指示灯。
+![Version 2 board, front](Hardware/v2/正面.png)
+![Version 2 board, back](Hardware/v2/背面.png)
 
-原理图见 [Hardware/v2/原理图.pdf](Hardware/v2/原理图.pdf)。网关侧软件在另一个仓库。
+- STM32F103 on board, with SWD, BOOT switch, reset and debug UART.
+- 24 V input; 24 V to 5 V 5 A for the Linux gateway, 24 V to 5 V 2 A and 5 V to 3.3 V for the board, all fused and protected.
+- Four relays rated 250 VAC 10 A; a slot in the PCB isolates the mains relay area from the low-voltage logic; CH1 and CH2 can use 24 V or GND as common through jumpers.
+- RS485 transceiver to the PT100 acquisition card and a separate UART to the Linux gateway; the displays, four setting keys and indicators of version 1 are kept.
 
-## 目录
+| Inside the enclosure, running | Closed enclosure |
+|---|---|
+| ![Enclosure open](Hardware/v2/enclosure_open.jpg) | ![Enclosure closed](Hardware/v2/enclosure_closed.jpg) |
+
+Schematic: [Hardware/v2/原理图.pdf](Hardware/v2/原理图.pdf). The gateway software lives in a separate repository.
+
+## Folders
 
 ```
-Hardware/   第一版嘉立创EDA 工程、原理图 PDF、制板文件、图片；v2/ 为第二版渲染图与原理图
-Software/   STM32F103 固件工程，含 README 和代码说明
-Doc/        交付说明书（LaTeX 源与 PDF）
+Hardware/   version 1 EasyEDA project, schematic PDF, fabrication files, images; v2/ holds version 2 renders and schematic
+Software/   STM32F103 firmware project with its README and code notes
+Doc/        delivery manual, LaTeX source and PDF
 ```
 
-## 版本
+## History
 
-- 2026-07：第一版交付，本地测温、显示、设置与四路联动。
-- 2026-10：第二版集成主控板硬件设计完成；Linux 网关接入网线、Wi-Fi、4G，远程阈值与报警录像，软件进行中。
+- 2026-07: version 1 delivered: local temperature measurement, display, settings and four-way interlock.
+- 2026-10: version 2 controller board designed; Linux gateway with Ethernet, Wi-Fi and 4G, remote thresholds and alarm video.
+- 2026-11: version 2 assembled into its enclosure; all functions passed bench testing.
